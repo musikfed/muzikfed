@@ -99,6 +99,13 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <a class="download" id="lyricsLink">Скачать lyrics.txt</a>
 <p class="hint">Воспроизведение WAV пока НЕ произносит текст; для настоящего русского вокала нужна отдельная модель.</p></div>
 <p class="hint">MusicXML открой на Windows .103 в MuseScore Studio 4 с MuseSounds Core. Там же экспортируй качественный WAV. Быстрый WAV здесь — только черновой. SATB в этой версии поёт гласные, а не русский текст.</p></section>
+<section class="card" id="neuralCard">
+<div class="sectionhead"><h2>Настоящий вокал · ACE-Step 1.5</h2><span class="pill" id="aceStatus">Проверка модели...</span></div>
+<p class="hint">Отдельный необязательный нейродвижок RTX 3060. Он генерирует песню по словам и стилю, НЕ обязан петь точно написанную MIDI-мелодию и не гарантирует отдельные голосовые дорожки.</p>
+<button type="button" class="secondary" id="aceGenerate" disabled style="width:100%">Создать нейропесню с русским голосом</button>
+<p class="hint" id="aceMessage">Для запуска сначала создай хор или оркестр+хор с текстом. Затем подключи локальную ACE-Step 1.5 на CORE.</p>
+<div id="aceOutput" class="hide"><audio id="aceAudio" controls preload="none"></audio><a id="aceLink" class="download" style="display:block">Скачать нейропесню WAV</a></div>
+</section>
 <section class="card results" id="qualityCard"><div class="sectionhead"><h2>Контроль музыкальной структуры</h2><span id="passCount" class="pill"></span></div><div class="quality" id="checks"></div><div class="info"><span>Всего нот: <strong id="noteCount"></strong></span><span>Опорные созвучия: <strong id="chordRatio"></strong></span><span>Скачки > октавы: <strong id="leapRatio"></strong></span></div><div id="warnings" class="hint"></div><p class="note">Эти проверки находят технические ошибки, но не доказывают музыкальную выразительность. Художественное качество оценивают по прослушиванию финального WAV.</p></section>
 <section class="card" id="serviceCard">
 <div class="sectionhead"><h2>Питание Pocket Orchestra</h2><span class="pill">CORE .100</span></div>
@@ -233,6 +240,54 @@ async function pollMonitor(){
 pollMonitor();
 setInterval(pollMonitor,3000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollMonitor()});
+
+// Optional separate neural song engine, not a hidden dependency of the score renderer.
+let aceAvailable=false, acePollTimer=null;
+async function aceRefresh(){
+  try{
+    const r=await fetch('/api/vocal/status',{cache:'no-store'});
+    const d=await r.json();
+    aceAvailable=!!d.available;
+    $('aceStatus').textContent=aceAvailable?'Локальная модель отвечает':'Не подключено';
+    $('aceGenerate').disabled=!aceAvailable;
+    if(!aceAvailable)$('aceMessage').textContent='ACE-Step не установлена или не запущена. Обычная партитура и черновой WAV работают без неё. См. docs/LYRICS_AND_VOCALS.md.';
+  }catch(e){$('aceStatus').textContent='Не подключено';aceAvailable=false;$('aceGenerate').disabled=true}
+}
+aceRefresh();
+$('aceGenerate').addEventListener('click',async()=>{
+  if(!aceAvailable)return;
+  if(!lastJob){$('aceMessage').textContent='Сначала сочини хор или оркестр + хор, чтобы появился lyrics.txt.';return;}
+  if(!window.confirm('Запустить отдельную генерацию нейропесни на RTX? Это может занять время и не будет точно совпадать с MIDI.'))return;
+  $('aceGenerate').disabled=true;
+  $('aceOutput').classList.add('hide');
+  $('aceMessage').textContent='ACE-Step принимает задачу...';
+  try{
+    const r=await fetch('/api/vocal/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_id:lastJob})});
+    const d=await r.json();
+    if(!r.ok)throw Error(d.detail||'Ошибка ACE-Step');
+    $('aceMessage').textContent='Нейросеть обрабатывает текст. Пока она работает, можно наблюдать за VRAM в мониторе.';
+    const job=lastJob;
+    if(acePollTimer)clearTimeout(acePollTimer);
+    const poll=async()=>{
+      try{
+        const p=await fetch('/api/vocal/poll/'+encodeURIComponent(job),{cache:'no-store'});
+        const v=await p.json();
+        if(!p.ok)throw Error(v.detail||'Ошибка статуса');
+        if(v.state==='complete'&&v.wav_url){
+          $('aceMessage').textContent='Нейропесня готова. Это новая генерация, не точный рендер нот.';
+          $('aceAudio').src=v.wav_url;
+          $('aceLink').href=v.wav_url;$('aceLink').setAttribute('download','neural_song.wav');
+          $('aceOutput').classList.remove('hide');$('aceGenerate').disabled=false;
+        }else if(v.state==='failed'){
+          $('aceMessage').textContent=v.message||'Нейросеть завершилась с ошибкой';$('aceGenerate').disabled=false;
+        }else{
+          acePollTimer=setTimeout(poll,5000);
+        }
+      }catch(e){$('aceMessage').textContent='Ошибка проверки нейропесни: '+e.message;$('aceGenerate').disabled=false;}
+    };
+    acePollTimer=setTimeout(poll,5000);
+  }catch(e){$('aceMessage').textContent='Нейровокал не запустился: '+e.message;$('aceGenerate').disabled=false;}
+});
 
 function link(id,url){const e=$(id);e.href=url;e.classList.remove('disabled');e.setAttribute('download','')}
 $('reroll').addEventListener('click',()=>{$('seed').value=(Number($('seed').value)+1)%4294967296;saveSettings();$('go').click()});
