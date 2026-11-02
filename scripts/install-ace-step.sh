@@ -47,6 +47,8 @@ Environment=ACESTEP_CHECKPOINTS_DIR=$ENGINE/checkpoints
 Environment=ACESTEP_API_HOST=127.0.0.1
 Environment=ACESTEP_API_PORT=8001
 Environment=ACESTEP_INIT_LLM=auto
+Environment=ACESTEP_CONFIG_PATH=acestep-v15-turbo
+Environment=ACESTEP_LM_MODEL_PATH=acestep-5Hz-lm-0.6B
 Environment=ACESTEP_OFFLOAD_TO_CPU=true
 UMask=0077
 NoNewPrivileges=true
