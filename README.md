@@ -24,6 +24,11 @@
 
 ### Запуск на Ubuntu CORE 192.168.0.100
 
+**Единственная рабочая папка на CORE: `/1tbdisk/muzikfed` на 2 ТБ диске.** Исходники, `.venv`, кэш uv и все результаты `outputs/` остаются внутри неё. Старый путь в `~/pocket-orchestra` больше не используется. Служебный systemd user-unit находится в `~/.config/systemd/user` (это стандартное место для юнитов).
+
+До установки проверь, что `/1tbdisk` действительно находится на нужном диске (`findmnt -T /1tbdisk`). Если `/1tbdisk/muzikfed` уже содержит файлы, сначала выясни, является ли она Git-репозиторием: **ничего не удаляй и не перезаписывай**. Развёртывание через `scripts/deploy-to-core.sh` обрабатывает пустую папку и существующий репозиторий, но останавливается при посторонних файлах.
+
+
 Панель работает по твоей существующей LAN/VPN **на http://192.168.0.100:9095**. Дополнительный SSH-туннель не требуется.
 
 На сервере Ubuntu 24.04 в SSH-сессии обычного пользователя:
@@ -31,8 +36,8 @@
 ```bash
 sudo apt update
 sudo apt install -y git curl fluidsynth fluid-soundfont-gm
-git clone https://github.com/musikfed/muzikfed.git ~/pocket-orchestra
-cd ~/pocket-orchestra
+git clone https://github.com/musikfed/muzikfed.git /1tbdisk/muzikfed
+cd /1tbdisk/muzikfed
 bash scripts/install-core.sh
 systemctl --user status pocket-orchestra --no-pager
 curl -fsS http://192.168.0.100:9095/api/health
@@ -76,7 +81,7 @@ export POCKET_ORCHESTRA_SF2=/path/to/your/soundfont.sf2
 uv run pocket-orchestra
 ```
 
-Для результатов используется `outputs/<uuid>` (файлы игнорируются Git). В `.gitignore` запрещена случайная публикация аудиосэмплов, библиотек и `.env`.
+Для результатов используется `/1tbdisk/muzikfed/outputs/<uuid>` (файлы игнорируются Git). В `.gitignore` запрещена случайная публикация аудиосэмплов, библиотек и `.env`.
 
 ## Состав файлов
 
@@ -111,15 +116,15 @@ uv run pocket-orchestra
 **Первые загрузка и установка** на Ubuntu .100:
 
 ```bash
-git clone https://github.com/musikfed/muzikfed.git ~/pocket-orchestra
-cd ~/pocket-orchestra
+git clone https://github.com/musikfed/muzikfed.git /1tbdisk/muzikfed
+cd /1tbdisk/muzikfed
 bash scripts/install-core.sh
 ```
 
 **Обновить сервер** после нового коммита в GitHub:
 
 ```bash
-cd ~/pocket-orchestra
+cd /1tbdisk/muzikfed
 bash scripts/update-core.sh
 ```
 
