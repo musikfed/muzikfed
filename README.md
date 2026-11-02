@@ -26,6 +26,8 @@
 
 **Единственная рабочая папка на CORE: `/1tbdisk/muzikfed` на 2 ТБ диске.** Исходники, `.venv`, кэш uv и все результаты `outputs/` остаются внутри неё. Старый путь в `~/pocket-orchestra` больше не используется. Служебный systemd user-unit находится в `~/.config/systemd/user` (это стандартное место для юнитов).
 
+На CORE диск уже проверен как `/dev/nvme1n1p2` (ext4). Если `git clone` выдаёт `Permission denied`, а `/1tbdisk/muzikfed` ещё не существует, один раз создай папку от имени обычного пользователя через `sudo install -d -o "$(id -un)" -g "$(id -gn)" -m 755 /1tbdisk/muzikfed`. Не меняй права всего диска.
+
 До установки проверь, что `/1tbdisk` действительно находится на нужном диске (`findmnt -T /1tbdisk`). Если `/1tbdisk/muzikfed` уже содержит файлы, сначала выясни, является ли она Git-репозиторием: **ничего не удаляй и не перезаписывай**. Развёртывание через `scripts/deploy-to-core.sh` обрабатывает пустую папку и существующий репозиторий, но останавливается при посторонних файлах.
 
 
@@ -36,6 +38,8 @@
 ```bash
 sudo apt update
 sudo apt install -y git curl fluidsynth fluid-soundfont-gm
+# Один раз: создать только папку проекта с правами текущего пользователя.
+sudo install -d -o "$(id -un)" -g "$(id -gn)" -m 755 /1tbdisk/muzikfed
 git clone https://github.com/musikfed/muzikfed.git /1tbdisk/muzikfed
 cd /1tbdisk/muzikfed
 bash scripts/install-core.sh
