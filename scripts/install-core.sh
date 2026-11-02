@@ -46,6 +46,14 @@ export UV_CACHE_DIR="$PROJECT_DIR/.cache/uv"
 mkdir -p "$UV_CACHE_DIR" "$PROJECT_DIR/outputs"
 chmod 700 "$PROJECT_DIR/outputs" "$PROJECT_DIR/.cache"
 
+# One-time cleanup of the old shutdown-token mechanism (removed).
+# Only this known generated regular file is deleted; no other cache files.
+LEGACY_CONTROL_FILE="$PROJECT_DIR/.cache/admin-token"
+if [[ -f "$LEGACY_CONTROL_FILE" && ! -L "$LEGACY_CONTROL_FILE" ]]; then
+  rm -- "$LEGACY_CONTROL_FILE"
+  echo "Removed obsolete Pocket Orchestra control token."
+fi
+
 cd "$PROJECT_DIR"
 "$UV_BIN" sync --extra dev --python 3.12
 "$UV_BIN" run pytest -q
