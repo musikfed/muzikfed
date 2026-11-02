@@ -50,31 +50,6 @@ cd "$PROJECT_DIR"
 "$UV_BIN" sync --extra dev --python 3.12
 "$UV_BIN" run pytest -q
 
-# Generate a strong per-installation secret for the web Stop button.
-# The token is never logged, committed to Git, or served by the API.
-CONTROL_TOKEN_FILE="$PROJECT_DIR/.cache/admin-token"
-if [[ -L "$CONTROL_TOKEN_FILE" ]]; then
-  echo "ERROR: control token file is a symlink; refusing for safety." >&2
-  exit 1
-fi
-if [[ ! -e "$CONTROL_TOKEN_FILE" ]]; then
-  python3 - "$CONTROL_TOKEN_FILE" <<'PY'
-import os
-import pathlib
-import secrets
-import sys
-
-path = pathlib.Path(sys.argv[1])
-fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-with os.fdopen(fd, "w", encoding="utf-8") as out:
-    out.write(secrets.token_urlsafe(32))
-PY
-  echo "Created a private web-control token: $CONTROL_TOKEN_FILE"
-else
-  [[ -f "$CONTROL_TOKEN_FILE" ]] || { echo "ERROR: invalid control token file." >&2; exit 1; }
-  chmod 600 "$CONTROL_TOKEN_FILE"
-  echo "Reusing existing private web-control token."
-fi
 USER_SYSTEMD_DIR="$HOME/.config/systemd/user"
 mkdir -p "$USER_SYSTEMD_DIR"
 cat > "$USER_SYSTEMD_DIR/$SERVICE_NAME" <<UNIT
@@ -89,7 +64,6 @@ ExecStart=$UV_BIN run --project $PROJECT_DIR pocket-orchestra
 Environment=UV_PROJECT_ENVIRONMENT=$PROJECT_DIR/.venv
 Environment=UV_CACHE_DIR=$PROJECT_DIR/.cache/uv
 Environment=POCKET_ORCHESTRA_OUTPUT=$PROJECT_DIR/outputs
-Environment=POCKET_ORCHESTRA_CONTROL_TOKEN_FILE=$PROJECT_DIR/.cache/admin-token
 Environment=POCKET_ORCHESTRA_HOST=192.168.0.100
 Environment=POCKET_ORCHESTRA_PORT=9095
 UMask=0077
@@ -113,7 +87,6 @@ cat <<'TXT'
 
 Project, venv, uv cache and outputs: /1tbdisk/muzikfed
 The user systemd service descriptor is stored under ~/.config/systemd/user/.
-Web Stop button token: bash /1tbdisk/muzikfed/scripts/show-control-token.sh
 Start/stop manually: bash scripts/start-core.sh / bash scripts/stop-core.sh
 NEXT: Open http://192.168.0.100:9095 in the Acer browser over your existing VPN.
 Health check on CORE: curl -fsS http://192.168.0.100:9095/api/health
