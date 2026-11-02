@@ -86,7 +86,8 @@ UNIT
 
 if systemctl --user daemon-reload && systemctl --user enable --now "$SERVICE_NAME"; then
   systemctl --user restart "$SERVICE_NAME"
-  echo 'Pocket Orchestra service installed: systemctl --user status pocket-orchestra'
+  bash "$PROJECT_DIR/scripts/wait-core.sh"
+  echo 'Pocket Orchestra HTTP service confirmed ready: http://192.168.0.100:9095'
 else
   echo 'WARNING: systemd --user is unavailable in this session.' >&2
   echo 'Manual launch: uv run pocket-orchestra' >&2
