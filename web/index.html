@@ -14,6 +14,19 @@ label{display:block;font-size:12px;font-weight:650;color:#e0e3e8;margin:0 0 7px}
 input,select,textarea{font:inherit;color:var(--ink);background:var(--panel2);border:1px solid #454c59;border-radius:9px;width:100%;padding:10px 11px;outline:none}input:focus,select:focus,textarea:focus{border-color:var(--amber)}textarea{min-height:111px;resize:vertical;line-height:1.6}input[type=range]{height:18px;padding:0;accent-color:var(--amber);cursor:pointer}input[type=checkbox]{width:17px;height:17px;accent-color:var(--amber)}
 .rangeLabel{display:flex;justify-content:space-between;gap:15px}.rangeLabel output{color:var(--amber);font-variant-numeric:tabular-nums}.checkbox{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--soft)}.checkbox label{margin:0;font-size:13px;font-weight:500;color:var(--soft)}
 button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(90deg,#dcb178,#eac898);color:#282018;padding:14px 18px;width:100%;border-radius:10px;font-weight:750;letter-spacing:.02em}.primary:disabled{opacity:.5;cursor:progress}.secondary{background:#303846;border:1px solid #485364;color:var(--ink);padding:10px 13px;border-radius:9px}.danger{background:#472725;border:1px solid #9b4f4d;color:#ffe7e4;padding:11px 15px;border-radius:9px;font-weight:700;width:100%}.danger:hover{background:#59302c}.danger:disabled{opacity:.5;cursor:wait}
+/* Lightweight live CORE hardware telemetry: bars updated every three seconds. */
+.monitor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.metric{background:#252b34;border:1px solid #3b424f;border-radius:10px;padding:12px;min-width:0}
+.metric-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.metric-value{font-size:17px;color:var(--amber);font-weight:750;font-variant-numeric:tabular-nums}
+.meter{height:8px;background:#141920;border-radius:8px;overflow:hidden;margin:10px 0 7px}
+.meter-fill{height:100%;background:linear-gradient(90deg,#659a91,#b4d2b4);width:0;transition:width .55s ease}
+.meter-fill.hot{background:linear-gradient(90deg,#d2a360,#eb836e)}
+.socket-lines{margin-top:8px;display:flex;flex-wrap:wrap;gap:5px}
+.socket-lines span{background:#303846;border-radius:6px;padding:4px 7px;font-size:11px}
+#monGpuName{word-break:break-word}
+@media(max-width:520px){.monitor-grid{grid-template-columns:1fr}}
+
 .info{display:flex;justify-content:space-between;gap:12px;background:#252b34;border:1px solid #3b424f;padding:12px;border-radius:9px;margin:14px 0;font-size:12px;color:var(--soft)}.info strong{color:var(--ink)}
 .stage{background:linear-gradient(160deg,#222936,#161b23);min-height:245px;border:1px solid #48505d;border-radius:13px;padding:19px}.stageTop{display:flex;justify-content:space-between;align-items:center;gap:15px}.stageSub{font-size:12px;color:var(--soft)}
 .timeline{display:flex;gap:4px;margin:21px 0 15px}.bar{height:33px;flex:1;background:#485262;border:1px solid #687383;border-radius:3px;opacity:.65;position:relative;transition:.2s;min-width:3px}.bar:nth-child(4n+1){border-left:2px solid #d7b783}.bar:hover{opacity:1;transform:translateY(-3px)}.bar.a{background:#657d78}.bar.b{background:#957552}.bar.c{background:#7a6f9d}.bar.d{background:#608495}
@@ -49,6 +62,20 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <div class="checkbox"><input type="checkbox" id="render" checked><label for="render">Создать черновой WAV, если FluidSynth установлен</label></div>
 <button id="go" class="primary">✦ Сочинить и оркестровать</button><button id="reroll" class="secondary" style="width:100%;margin-top:10px">↻ Новая вариация (другой seed)</button><p class="hint" id="working"></p></section>
 </div><div class="right">
+<section class="card" id="monitorCard"><div class="sectionhead"><h2>Мониторинг Huananzhi CORE .100</h2><span class="pill" id="monStatus">Подключение…</span></div>
+<div class="monitor-grid">
+<div class="metric"><div class="metric-head"><strong>Xeon · CPU</strong><span class="metric-value" id="monCpu">—</span></div>
+<div class="meter"><div class="meter-fill" id="monCpuBar"></div></div><div class="hint" id="monCpuInfo">Загрузка обоих процессоров</div><div class="socket-lines" id="monSockets"></div></div>
+<div class="metric"><div class="metric-head"><strong>RAM</strong><span class="metric-value" id="monRam">—</span></div>
+<div class="meter"><div class="meter-fill" id="monRamBar"></div></div><div class="hint" id="monRamInfo">Оперативная память</div></div>
+<div class="metric"><div class="metric-head"><strong>RTX 3060 · GPU</strong><span class="metric-value" id="monGpu">—</span></div>
+<div class="meter"><div class="meter-fill" id="monGpuBar"></div></div><div class="hint" id="monGpuInfo">Данные через nvidia-smi</div></div>
+<div class="metric"><div class="metric-head"><strong>Видеопамять · VRAM</strong><span class="metric-value" id="monVram">—</span></div>
+<div class="meter"><div class="meter-fill" id="monVramBar"></div></div><div class="hint" id="monVramInfo">Из занятых 12 ГБ</div></div>
+</div>
+<div class="info" style="flex-wrap:wrap"><span>API-процесс: <strong id="monProcess">—</strong></span><span>Диск 2 ТБ: <strong id="monDisk">—</strong></span></div>
+<p class="hint">Обновляется каждые 3 секунды — наблюдай во время генерации. CPU, RAM и GPU показывают загрузку всей машины, включая другие программы. При обычной генерации нот видеокарта может оставаться на 0%: GPU нужен прежде всего для LLM.</p>
+</section>
 <section class="card"><div class="sectionhead"><h2>Партитура и структура</h2><span class="sectionTag" id="currentState">Ожидает генерации</span></div>
 <div class="stage"><div class="stageTop"><div><div class="eyebrow">ОБЗОР ПЬЕСЫ</div><h2 id="pieceTitle" style="font-size:23px;margin:9px 0 3px">Свет за горизонтом</h2><div class="stageSub" id="pieceCaption">D minor · 94 BPM · 16 тактов · Оркестр</div></div><div style="font-size:38px;color:#d6b585">♩</div></div><div class="timeline" id="timeline"></div><div class="legend"><span><i style="background:#657d78"></i>A: экспозиция</span><span><i style="background:#957552"></i>A′: развитие</span><span><i style="background:#7a6f9d"></i>B: контраст</span><span><i style="background:#608495"></i>A″: возвращение</span></div></div>
 <div style="margin-top:17px"><h3>Инструментальные партии <span id="partCount" class="muted"></span></h3><div id="parts" class="parts"><span class="muted">Партии появятся после генерации.</span></div></div></section>
@@ -105,6 +132,58 @@ $('ensemble').addEventListener('change',preview);
 $('creationMode').addEventListener('change',selectCreationMode);
 selectCreationMode();
 async function ping(){try{const r=await fetch('/api/health');if(!r.ok)throw Error();const d=await r.json();$('statusDot').classList.add('up');$('serverStatus').textContent='CORE .100 · '+(d.renderer?'черновой рендер доступен':'только партитуры / MIDI')}catch{$('serverStatus').textContent='Нет соединения с сервером'}}ping();
+// Live status intentionally does not depend on an active musical job.
+let monitorBusy=false;
+function percentText(value){return typeof value==='number'&&Number.isFinite(value)?value.toFixed(1)+'%':'—'}
+function setGauge(textId,barId,value){
+  $(textId).textContent=percentText(value);
+  const bar=$(barId);
+  const pct=typeof value==='number'&&Number.isFinite(value)?Math.max(0,Math.min(100,value)):0;
+  bar.style.width=pct+'%';
+  bar.classList.toggle('hot',pct>=85);
+}
+function numberOrDash(v,digits=1){return typeof v==='number'&&Number.isFinite(v)?v.toFixed(digits):'—'}
+async function pollMonitor(){
+  if(monitorBusy||document.hidden)return;
+  monitorBusy=true;
+  try{
+    const response=await fetch('/api/metrics',{cache:'no-store'});
+    if(!response.ok)throw new Error('HTTP '+response.status);
+    const data=await response.json();
+    const cpu=data.cpu||{},ram=data.ram||{},gpu=data.gpu||{},proc=data.process||{},disk=data.storage||{};
+    $('monStatus').textContent='В сети · 3 сек.';
+    setGauge('monCpu','monCpuBar',cpu.percent);
+    $('monCpuInfo').textContent=(cpu.threads||'—')+' потоков · load '+numberOrDash(cpu.load_1m,2);
+    $('monSockets').replaceChildren();
+    for(const socket of (cpu.sockets||[])){
+      const item=document.createElement('span');
+      item.textContent='CPU '+(socket.socket+1)+' · '+percentText(socket.percent)+' · '+socket.logical_threads+' потоков';
+      $('monSockets').append(item);
+    }
+    setGauge('monRam','monRamBar',ram.percent);
+    $('monRamInfo').textContent=numberOrDash(ram.used_gib,2)+' / '+numberOrDash(ram.total_gib,2)+' ГиБ' +
+      (typeof ram.swap_used_gib==='number'?' · Swap '+numberOrDash(ram.swap_used_gib,2)+' ГиБ':'');
+    if(gpu.available){
+      setGauge('monGpu','monGpuBar',gpu.utilization_pct);
+      $('monGpuInfo').textContent=(gpu.name||'NVIDIA')+' · '+numberOrDash(gpu.temperature_c,0)+'°C · '+numberOrDash(gpu.power_w,0)+' Вт';
+      setGauge('monVram','monVramBar',gpu.vram_percent);
+      $('monVramInfo').textContent=numberOrDash(gpu.vram_used_mib,0)+' / '+numberOrDash(gpu.vram_total_mib,0)+' МиБ';
+    }else{
+      setGauge('monGpu','monGpuBar',null);
+      setGauge('monVram','monVramBar',null);
+      $('monGpuInfo').textContent=gpu.message||'Данные GPU недоступны';
+      $('monVramInfo').textContent='Установи драйвер NVIDIA / проверь nvidia-smi';
+    }
+    $('monProcess').textContent=percentText(proc.cpu_percent_total)+' CPU · '+numberOrDash(proc.rss_mib,0)+' МиБ RAM';
+    $('monDisk').textContent=percentText(disk.percent)+' · '+numberOrDash(disk.used_gib,0)+' / '+numberOrDash(disk.total_gib,0)+' ГиБ';
+  }catch(error){
+    $('monStatus').textContent='Нет связи с монитором';
+  }finally{monitorBusy=false}
+}
+pollMonitor();
+setInterval(pollMonitor,3000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollMonitor()});
+
 function link(id,url){const e=$(id);e.href=url;e.classList.remove('disabled');e.setAttribute('download','')}
 $('reroll').addEventListener('click',()=>{$('seed').value=(Number($('seed').value)+1)%4294967296;$('go').click()});
 $('go').addEventListener('click',async()=>{const btn=$('go');btn.disabled=true;btn.textContent='Композитор работает...';$('working').textContent='Формируем темы, гармонию, партии, проверяем диапазоны и создаём файлы.';try{const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:config(),render_preview:$('render').checked})});const d=await r.json();if(!r.ok)throw Error(typeof d.detail==='string'?d.detail:JSON.stringify(d.detail));lastJob=d.job_id;$('resultCard').classList.add('visible');$('qualityCard').classList.add('visible');$('llmInfo').textContent=d.llm;$('renderInfo').textContent=d.render;$('currentState').textContent='Партитура готова';let partNames=Object.entries(d.composition.parts);$('partCount').textContent=partNames.length+' шт.';$('parts').replaceChildren();for(const [id,count] of partNames){const div=document.createElement('div');div.className='part';const n=document.createElement('span');n.textContent=names[id]||id;const v=document.createElement('b');v.textContent=count+' нот';div.append(n,v);$('parts').append(div)}link('xmlLink',d.urls.musicxml);link('midiLink',d.urls.midi);link('reportLink',d.urls.report);$('layerLinks').replaceChildren();for(const [kind,label] of [['choir.musicxml','Хор · MusicXML'],['choir.mid','Хор · MIDI'],['orchestra.musicxml','Оркестр · MusicXML'],['orchestra.mid','Оркестр · MIDI'],['quartet.musicxml','Квартет · MusicXML'],['quartet.mid','Квартет · MIDI']]){if(d.urls[kind]){const a=document.createElement('a');a.className='download';a.href=d.urls[kind];a.setAttribute('download','');a.textContent=label;$('layerLinks').append(a)}}$('audio').replaceChildren();if(d.urls.wav){const a=document.createElement('audio');a.controls=true;a.preload='none';a.src=d.urls.wav;$('audio').append(a)}$('checks').replaceChildren();for(const x of d.quality.checks){const el=document.createElement('div');el.className='check';const ico=document.createElement('strong');ico.className=x.ok?'ok':'bad';ico.textContent=x.ok?'✓':'!';const caption=document.createElement('span');caption.textContent=x.description;el.append(ico,caption);$('checks').append(el)}$('passCount').textContent=d.quality.passed+'/'+d.quality.total+' проверок';$('noteCount').textContent=d.quality.statistics.notes;$('chordRatio').textContent=Math.round(d.quality.statistics.strong_beat_chord_ratio*100)+'%';$('leapRatio').textContent=Math.round(d.quality.statistics.leap_rate*100)+'%';$('warnings').textContent=d.quality.warnings.join(' · ');$('working').textContent='Готово. Скачай партитуру и открой в MuseScore Studio на GRAPHICS .103.';}catch(e){$('working').textContent='Ошибка: '+e.message;$('currentState').textContent='Ошибка генерации';}finally{btn.disabled=false;btn.textContent='✦ Сочинить и оркестровать'}});
