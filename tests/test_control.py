@@ -1,4 +1,4 @@
-"""Admin stop must be authenticated, same-origin and scheduled safely."""
+"""VPN dashboard stop: no token; allow same-origin browser requests only."""
 import subprocess
 
 from fastapi.testclient import TestClient
@@ -10,34 +10,15 @@ client = TestClient(app)
 ORIGIN = {"Origin": "http://testserver"}
 
 
-def test_stop_requires_origin_and_secret(tmp_path, monkeypatch):
-    token_file = tmp_path / "token"
-    token_file.write_text("example-private-secret", encoding="utf-8")
-    monkeypatch.setattr(control, "TOKEN_FILE", token_file)
-
+def test_stop_denies_cross_origin_requests(monkeypatch):
+    calls = []
+    monkeypatch.setattr(control.subprocess, "run", lambda *args, **kwargs: calls.append(args))
     assert client.post("/api/admin/stop").status_code == 403
-    assert client.post("/api/admin/stop", headers=ORIGIN).status_code == 403
-    assert client.post("/api/admin/stop", headers={
-        **ORIGIN, "X-Pocket-Control-Token": "wrong",
-    }).status_code == 403
-    assert client.post("/api/admin/stop", headers={
-        "Origin": "http://attacker.example",
-        "X-Pocket-Control-Token": "example-private-secret",
-    }).status_code == 403
+    assert client.post("/api/admin/stop", headers={"Origin": "http://other.example"}).status_code == 403
+    assert not calls
 
 
-def test_stop_requires_installed_token(tmp_path, monkeypatch):
-    monkeypatch.setattr(control, "TOKEN_FILE", tmp_path / "absent")
-    res = client.post("/api/admin/stop", headers={
-        **ORIGIN, "X-Pocket-Control-Token": "anything",
-    })
-    assert res.status_code == 503
-
-
-def test_stop_schedules_only_our_service(tmp_path, monkeypatch):
-    token_file = tmp_path / "token"
-    token_file.write_text("example-private-secret", encoding="utf-8")
-    monkeypatch.setattr(control, "TOKEN_FILE", token_file)
+def test_stop_does_not_need_token_and_schedules_only_our_service(monkeypatch):
     calls = []
 
     def fake_run(command, **kwargs):
@@ -45,9 +26,7 @@ def test_stop_schedules_only_our_service(tmp_path, monkeypatch):
         return subprocess.CompletedProcess(command, 0, "", "")
 
     monkeypatch.setattr(control.subprocess, "run", fake_run)
-    res = client.post("/api/admin/stop", headers={
-        **ORIGIN, "X-Pocket-Control-Token": "example-private-secret",
-    })
+    res = client.post("/api/admin/stop", headers=ORIGIN)
     assert res.status_code == 202, res.text
     assert res.json()["status"] == "stop_scheduled"
     assert len(calls) == 1
@@ -61,24 +40,19 @@ def test_stop_schedules_only_our_service(tmp_path, monkeypatch):
     assert kwargs["check"] is True
 
 
-def test_stop_fails_safely_when_user_systemd_unavailable(tmp_path, monkeypatch):
-    token_file = tmp_path / "token"
-    token_file.write_text("example-private-secret", encoding="utf-8")
-    monkeypatch.setattr(control, "TOKEN_FILE", token_file)
-
+def test_stop_fails_safely_when_systemd_unavailable(monkeypatch):
     def fail(*args, **kwargs):
         raise FileNotFoundError("systemd-run absent")
 
     monkeypatch.setattr(control.subprocess, "run", fail)
-    res = client.post("/api/admin/stop", headers={
-        **ORIGIN, "X-Pocket-Control-Token": "example-private-secret",
-    })
+    res = client.post("/api/admin/stop", headers=ORIGIN)
     assert res.status_code == 503
 
 
-def test_dashboard_has_service_controls():
+def test_dashboard_has_simple_service_controls():
     html = client.get("/").text
     assert 'id="stopCore"' in html
-    assert 'id="stopToken"' in html
+    assert 'id="stopToken"' not in html
     assert 'id="creationMode"' in html
+    assert 'show-control-token.sh' not in html
     assert "Только голос" in html
