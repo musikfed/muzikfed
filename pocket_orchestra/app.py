@@ -15,12 +15,14 @@ from .export import write_midi, write_musicxml
 from .quality import inspect
 from .harmony import optimize_satb
 from .ollama import generate_plan
+from .control import router as control_router
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUTS = Path(os.environ.get("POCKET_ORCHESTRA_OUTPUT", str(ROOT / "outputs"))).resolve()
 OUTPUTS.mkdir(parents=True, exist_ok=True)
 SOUNDFONT = Path(os.environ.get("POCKET_ORCHESTRA_SF2", "/usr/share/sounds/sf2/FluidR3_GM.sf2"))
 app = FastAPI(title="Pocket Orchestra", version="0.1.0", docs_url="/api/docs", redoc_url=None)
+app.include_router(control_router)
 
 
 class GenerateRequest(BaseModel):
