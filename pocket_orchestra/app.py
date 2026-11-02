@@ -1,4 +1,4 @@
-"""FastAPI control desk. Binds localhost by default, recommended behind SSH/VPN."""
+"""FastAPI control desk for CORE .100; keep this unauthenticated API inside trusted LAN/VPN."""
 from __future__ import annotations
 import json
 import os
@@ -145,8 +145,8 @@ def artifact(job_id: str, filename: str):
 
 def main():
     import uvicorn
-    uvicorn.run("pocket_orchestra.app:app", host=os.environ.get("POCKET_ORCHESTRA_HOST", "127.0.0.1"),
-                port=int(os.environ.get("POCKET_ORCHESTRA_PORT", "8765")))
+    uvicorn.run("pocket_orchestra.app:app", host=os.environ.get("POCKET_ORCHESTRA_HOST", "192.168.0.100"),
+                port=int(os.environ.get("POCKET_ORCHESTRA_PORT", "9095")))
 
 
 if __name__ == "__main__":
