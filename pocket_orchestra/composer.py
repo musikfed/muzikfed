@@ -5,6 +5,7 @@ arrangement is role-based, instead of independent random note generation.
 """
 from __future__ import annotations
 from dataclasses import dataclass, asdict, fields
+import hashlib
 from random import Random
 from .theory import TONICS, SCALES, INSTRUMENTS, ORCHESTRA, STRING_QUARTET, CHOIR, chord_pcs, note_in_range
 
@@ -29,6 +30,8 @@ class Config:
     choir_vowel: str = "Ahh"
     use_ollama: bool = False
     model: str = "qwen3:8b"
+    style: str = "auto"
+    lyrics: str = ""
 
     def __post_init__(self):
         if not (1 <= len(self.title) <= 100 and len(self.prompt) <= 4000):
@@ -48,6 +51,10 @@ class Config:
             raise ValueError("Допустимые гласные: Ahh, Ooh, Mmm")
         if not (0 <= self.seed < 2**32):
             raise ValueError("seed вне диапазона")
+        if self.style not in ("auto", "cinematic", "march", "lyrical", "folk", "opera", "ambient"):
+            raise ValueError("Неизвестный музыкальный стиль")
+        if len(self.lyrics) > 4000:
+            raise ValueError("Максимальная длина текста песни — 4000 символов")
         if not (1 <= len(self.model) <= 80):
             raise ValueError("Некорректное имя модели")
 
@@ -111,11 +118,33 @@ def _arc(bar: int, n: int, climax: float) -> float:
     return max(0.12, min(1.0, 1.0 - dist / max(0.28, climax)))
 
 
+def _stable_seed(cfg: Config) -> int:
+    """Stable digest: text/title/style affect melody; same request stays reproducible."""
+    phrase = f"{cfg.seed}|{cfg.title}|{cfg.prompt}|{cfg.style}"
+    return int.from_bytes(hashlib.blake2b(phrase.encode("utf-8"), digest_size=8).digest(), "big")
+
+
+def _style(cfg: Config) -> str:
+    if cfg.style != "auto":
+        return cfg.style
+    text = (cfg.prompt + " " + cfg.title).casefold()
+    for name, words in (
+        ("march", ("марш", "шеств", "парад", "march")),
+        ("opera", ("опер", "ария", "тенор", "сопрано", "opera")),
+        ("folk", ("народн", "фольклор", "folk")),
+        ("lyrical", ("лирич", "романс", "любов", "баллад")),
+        ("ambient", ("атмосфер", "эмбиент", "ambient")),
+    ):
+        if any(word in text for word in words):
+            return name
+    return "cinematic"
+
+
 def _choose_harmony(cfg: Config, plan: dict | None) -> tuple[list[int], list[str]]:
     # Harmony is diatonic. Chosen from contrasting 4-bar cells with a stable cadence.
     if cfg.mode == "minor":
         variants = ([0, 5, 2, 4], [0, 3, 5, 4], [0, 6, 3, 4], [0, 5, 3, 4])
-        a, b = list(variants[cfg.seed % len(variants)]), [3, 5, 4, 0]
+        a, b = list(variants[_stable_seed(cfg) % len(variants)]), [3, 5, 4, 0]
     else:
         variants = ([0, 4, 5, 3], [0, 3, 4, 0], [0, 5, 3, 4], [0, 1, 4, 0])
         a, b = list(variants[cfg.seed % len(variants)]), [3, 1, 4, 0]
@@ -151,13 +180,20 @@ def interpret_prompt(cfg: Config) -> dict:
 
 
 def compose(cfg: Config, plan: dict | None = None) -> Piece:
-    rng = Random(cfg.seed)
+    rng = Random(_stable_seed(cfg))
+    style = _style(cfg)
     intent = interpret_prompt(cfg)
     harmony, sections = _choose_harmony(cfg, plan)
     keys = instrumentation(cfg.ensemble)
     tracks: dict[str, list[Note]] = {key: [] for key in keys}
     # Melodic motif offsets are scale degrees relative to a harmonic root.
-    motif = list([[4, 3, 2, 0], [2, 4, 3, 0], [4, 5, 2, 0], [2, 1, 0, 2]][(cfg.seed // 4) % 4])
+    motifs = (
+        (4, 3, 2, 0), (2, 4, 3, 0), (4, 5, 2, 0), (2, 1, 0, 2),
+        (4, 2, 0, 2), (2, 3, 4, 2), (0, 2, 4, 3), (4, 3, 0, 2),
+        (2, 0, 4, 2), (4, 2, 3, 0), (2, 4, 5, 3), (0, 3, 4, 2),
+    )
+    motif = list(rng.choice(motifs))
+    contrast = list(rng.choice([m for m in motifs if list(m) != motif]))
     if plan and isinstance(plan.get("motif"), list):
         proposal = plan["motif"]
         if len(proposal) == 4 and all(type(x) is int and -4 <= x <= 7 for x in proposal):
@@ -185,19 +221,30 @@ def compose(cfg: Config, plan: dict | None = None) -> Piece:
         # SAME motif returns in A/A′/A″, transposed by harmony, with a contrasting B.
         variant = [motif[0], motif[1], motif[2], motif[3]]
         if section == "B":
-            variant = [2, 4, 5, 2]
+            variant = contrast.copy()
         elif section == "A′":
             variant[-1] = max(-4, min(7, variant[-1] + 1))
         elif section == "A″" and bar % 4 == 3:
             variant = [4, 2, 1, 0]
         if bar == cfg.bars - 1:
             variant = [4, 2, 0, 0]
+        elif bar % 4 in (1, 2) and rng.random() < .45:
+            index = rng.choice((1, 3))
+            variant[index] = max(-2, min(5, variant[index] + rng.choice((-1, 1))))
 
         lead = "cello" if (intent["cello_intro"] and bar < 4 and "cello" in keys) else primary_voice
         # Melodic rhythm uses an intentionally recognizable bar shape.
-        durations = [(1, 1, 1, 1), (1.5, .5, 1, 1), (2, 1, 1)][(bar // 4) % 3]
+        rhythms = {
+            "march": ((1, 1, 1, 1), (1.5, .5, 1, 1)),
+            "opera": ((2, 1, 1), (1.5, .5, 2), (1, 1, 2)),
+            "lyrical": ((2, 1, 1), (1, 1, 2), (1.5, .5, 2)),
+            "folk": ((1, .5, .5, 2), (1, 1, 1, 1), (2, 1, 1)),
+            "ambient": ((2, 2), (3, 1)),
+            "cinematic": ((1, 1, 1, 1), (1.5, .5, 1, 1), (2, 1, 1), (1, 1, 2)),
+        }[style]
+        durations = rng.choice(rhythms)
         if cfg.density < 0.4:
-            durations = (2, 1, 1)
+            durations = rng.choice(((2, 1, 1), (2, 2)))
         start = 0.0
         for i, dur in enumerate(durations):
             degree = chord + variant[min(i, 3)]
@@ -251,4 +298,8 @@ def compose(cfg: Config, plan: dict | None = None) -> Piece:
 
     result_plan = dict(plan) if plan else {"source": "rule_based", "notes": "Recurrent motif, diatonic harmony, contrasting B section, cadential tonic"}
     result_plan["prompt_cues"] = intent
+    result_plan["resolved_style"] = style
+    result_plan["melodic_motif"] = motif
+    result_plan["contrast_motif"] = contrast
+    result_plan["composition_signature"] = f"{_stable_seed(cfg):016x}"
     return Piece(cfg, tracks, harmony, sections, result_plan)
