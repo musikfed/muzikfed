@@ -220,6 +220,26 @@ def gpu_engine_status():
     return gpu_control.state()
 
 
+def _watch_audio_job(job_id: str) -> None:
+    """Free VRAM when audio finishes even if the browser closes its tab.
+
+    Runs only while the API process is alive; ACE-Step systemd RuntimeMaxSec
+    also limits the independent model service as a crash-safety fallback.
+    """
+    import time
+    deadline = time.monotonic() + 1200
+    while time.monotonic() < deadline:
+        time.sleep(6)
+        try:
+            state = ace_step.poll(_jobdir(job_id))
+        except (OSError, RuntimeError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+            continue
+        if state.get("state") in ("complete", "failed"):
+            gpu_control.release_audio(job_id)
+            return
+    gpu_control.release_audio(job_id)
+
+
 @app.post("/api/vocal/start")
 def vocal_engine_start(payload: RenderRequest):
     job = _jobdir(payload.job_id)
@@ -238,6 +258,9 @@ def vocal_engine_start(payload: RenderRequest):
     except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError, RuntimeError) as exc:
         gpu_control.release_audio(payload.job_id)
         raise HTTPException(503, str(exc)[:250]) from exc
+    import threading
+    threading.Thread(target=_watch_audio_job, args=(payload.job_id,),
+                     daemon=True, name=f"ace-watch-{payload.job_id[:8]}").start()
     return result
 
 
