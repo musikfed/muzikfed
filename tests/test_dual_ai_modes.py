@@ -125,3 +125,29 @@ def test_orchestra_api_ai_mode_uses_mocked_note_level_model(monkeypatch):
     })
     assert r.status_code == 200, r.text
     assert r.json()["composition"]["planning"]["ai_counterpoint"]["source"] == "ollama_note_level"
+
+
+def test_direct_neural_song_project_does_not_compose_fake_midi():
+    from pocket_orchestra.app import app
+    c = TestClient(app)
+    response = c.post("/api/audio/project", json={"config": {
+        "ensemble": "orchestra_choir", "title": "Тайна моря",
+        "prompt": "Оперная песня о морских путешествиях", "lyrics": "Река несёт мечты",
+        "bars": 16, "style": "opera"},
+        "render_preview": False})
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["engine"] == "ace-step"
+    assert data["mode"] == "original"
+    report = c.get(f"/api/artifacts/{data['job_id']}/report.json").json()
+    assert report["composition"]["config"]["prompt"] == "Оперная песня о морских путешествиях"
+    assert report["source_midi"] is None
+    assert c.get(f"/api/artifacts/{data['job_id']}/score.mid").status_code == 404
+    lyrics = c.get(f"/api/artifacts/{data['job_id']}/lyrics.txt").text
+    assert "Река несёт мечты" in lyrics
+
+
+def test_original_song_web_calls_direct_endpoint():
+    page = TestClient(app).get("/").text
+    assert "'/api/audio/project':'/api/generate'" in page
+    assert "mode==='original'" in page
