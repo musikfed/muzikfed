@@ -22,28 +22,25 @@
 - **GRAPHICS .103**, Windows 11 + RX 7600 XT: MuseScore Studio 4 + MuseSounds Core; качественная озвучка и экспорт.
 - **Acer Swift 3**, Windows 11: браузер, RDP/SSH через WireGuard, задания и прослушивание.
 
-### На Ubuntu .100
+### Запуск на Ubuntu CORE 192.168.0.100
+
+Панель работает по твоей существующей LAN/VPN **на http://192.168.0.100:9095**. Дополнительный SSH-туннель не требуется.
+
+На сервере Ubuntu 24.04 в SSH-сессии обычного пользователя:
 
 ```bash
 sudo apt update
-sudo apt install -y fluidsynth fluid-soundfont-gm
-# cd ~/pocket-orchestra  (после распаковки/клонирования)
-uv sync --extra dev --python 3.12
-uv run pytest -q
-uv run pocket-orchestra
+sudo apt install -y git curl fluidsynth fluid-soundfont-gm
+git clone https://github.com/musikfed/muzikfed.git ~/pocket-orchestra
+cd ~/pocket-orchestra
+bash scripts/install-core.sh
+systemctl --user status pocket-orchestra --no-pager
+curl -fsS http://192.168.0.100:9095/api/health
 ```
 
-Откроется адрес **http://127.0.0.1:8765** на сервере .100.
+На Acer открой **http://192.168.0.100:9095** через настроенный WireGuard/VPN. CORE должен действительно иметь адрес `192.168.0.100` на интерфейсе (`ip -4 addr show`). Не пробрасывай 9095 на внешний IP: у прототипа пока нет авторизации.
 
-С Acer при доступном SSH к .100:
-
-```powershell
-ssh -L 8765:127.0.0.1:8765 user@<VPN-IP-СЕРВЕРА-.100>
-```
-
-Теперь открой **http://127.0.0.1:8765** в браузере Acer. Подставь свой реальный адрес VPN; в репозитории нет и не должно быть IP, паролей и ключей.
-
-Если работаешь по безопасному WireGuard, можно отдельно настроить прослушивание только WireGuard-интерфейса, ACL и авторизацию. Не открывай этот prototype на белом IP без защиты. Имеющиеся `privkey.pem` и `fullchain.pem` в репозиторий не добавляй.
+Вся последовательность первой установки, обновления и диагностики: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**. Как коммитить и отправлять файлы обратно в GitHub: **[docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)**.
 
 ### Локальный ИИ на CORE .100 (необязательно)
 
@@ -107,31 +104,42 @@ uv run pocket-orchestra
 
 Исходный код этой папки: MIT, см. `LICENSE`. MuseSounds, SoundFont и SFZ-библиотеки поставляются **отдельно** и имеют **собственные лицензии**, не включены в репозиторий.
 
-## Установка одним скриптом, GitHub и обновления
+## Как отправлять код на сервер и в GitHub
 
-Смотри [полную инструкцию по развёртыванию](docs/DEPLOYMENT.md) и [честную дорожную карту трёх режимов](docs/ROADMAP.md).
+Подробная инструкция: **[развёртывание CORE .100](docs/DEPLOYMENT.md)** и **[GitHub: clone / pull / commit / push](docs/GIT_WORKFLOW.md)**.
 
-На Ubuntu CORE .100, после `git clone`:
+**Первые загрузка и установка** на Ubuntu .100:
 
 ```bash
+git clone https://github.com/musikfed/muzikfed.git ~/pocket-orchestra
 cd ~/pocket-orchestra
 bash scripts/install-core.sh
 ```
 
-Для обновления после нового коммита на том же сервере:
+**Обновить сервер** после нового коммита в GitHub:
 
 ```bash
 cd ~/pocket-orchestra
 bash scripts/update-core.sh
 ```
 
-С Acer через WSL/Git Bash — безопасное развёртывание по SSH через WireGuard:
+**Обновить сервер с Acer** (WSL/Git Bash, через доступный VPN/SSH):
 
 ```bash
-bash scripts/deploy-to-core.sh YOUR_USER@YOUR_CORE_WIREGUARD_IP
+bash scripts/deploy-to-core.sh user@192.168.0.100
 ```
 
-Сервис привязан к 127.0.0.1 по умолчанию, поэтому на Acer нужен SSH-туннель. Команды `sudo` для установки ОС-зависимостей выполняются отдельно по желанию.
+**Загрузить свои правки в GitHub** из каталога клонированного репозитория:
+
+```bash
+git status
+git add README.md docs/DEPLOYMENT.md
+git diff --cached
+git commit -m "docs: improve instructions"
+git push origin main
+```
+
+В `git add` указывай фактически изменённые файлы; для push нужна настроенная GitHub-авторизация. Не отправляй сертификаты, ключи, `.env` и `outputs/` в публичный репозиторий. Проверяй изменения перед коммитом.
 
 ### Что пока нельзя обещать
 
