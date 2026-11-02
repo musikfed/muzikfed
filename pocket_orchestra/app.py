@@ -20,6 +20,7 @@ from . import ace_step, gpu_control
 from .ai_score import generate_counterpoint, apply_counterpoint
 from .control import router as control_router
 from .monitor import collect_metrics
+from .engines import ollama_status
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUTS = Path(os.environ.get("POCKET_ORCHESTRA_OUTPUT", str(ROOT / "outputs"))).resolve()
@@ -48,6 +49,12 @@ def home():
 def metrics():
     """Live read-only CORE hardware status, polled every ~3 seconds by VPN UI."""
     return collect_metrics()
+
+
+@app.get("/api/engines")
+def ai_engine_status():
+    """Honest engine readiness: installed Qwen, optional ACE-Step and GPU lease."""
+    return {"score_ai": ollama_status(), "audio_ai": {**ace_step.status(), **gpu_control.state()}}
 
 
 @app.get("/api/health")
