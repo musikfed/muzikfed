@@ -56,7 +56,7 @@ def test_neural_song_prompt_has_semantics_without_fake_lyrics(tmp_path):
     payload, note = build_payload(job, "original")
     assert payload["task_type"] if "task_type" in payload else "text2music"
     assert "морском шторме" in payload["prompt"]
-    assert payload["sample_mode"] is True
+    assert payload.get("sample_mode") is not True  # no unrelated random samples
     assert "Original Russian lyrics" in payload["sample_query"]
     assert "заря" not in payload["lyrics"]
     assert payload["vocal_language"] == "ru"
