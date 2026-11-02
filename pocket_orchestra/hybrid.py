@@ -37,7 +37,7 @@ def build_payload(job_dir: Path, mode: str = "original") -> tuple[dict, str]:
     topic = cfg.get("prompt", "").strip()[:3000]
     if not topic:
         raise ValueError("Описание музыки не должно быть пустым")
-    mode_description = ("Russian-language sung solo vocal, clear diction" if ensemble == "choir"
+    mode_description = ("Russian-language sung solo vocal, clear diction, a cappella" if ensemble == "choir"
                         else "Russian-language sung lead with symphonic orchestral accompaniment"
                         if is_voice else "Instrumental only, no vocals")
     caption = f"{character}. {mode_description}. Title: {title}. Full user request: {topic}"
@@ -47,15 +47,17 @@ def build_payload(job_dir: Path, mode: str = "original") -> tuple[dict, str]:
         "vocal_language": "ru" if is_voice else "en",
         "audio_format": "wav", "audio_duration": seconds,
         "bpm": int(cfg["tempo"]),
-        "key_scale": f"{cfg['key']} {'minor' if cfg['mode'] == 'minor' else 'major'}",
+        "key_scale": f"{cfg.get('key', 'D')} {'minor' if cfg.get('mode', 'minor') == 'minor' else 'major'}",
         "time_signature": "4", "thinking": True, "model": "acestep-v15-turbo",
-        "use_random_seed": False, "seed": int(cfg["seed"]), "batch_size": 1,
+        "use_random_seed": False, "seed": int(cfg.get("seed", 42)), "batch_size": 1,
     }
     if is_voice and not lyrics:
         # Let the local model propose words from the real prompt, never hardcoded verses.
         payload["sample_query"] = f"Original Russian lyrics, with natural rhymes. {topic}"
         payload["sample_mode"] = True
     if mode == "guided":
+        if is_voice and not lyrics:
+            raise ValueError("Для гибридного вокала впиши свой текст песни или получи его через Ollama.")
         guide = (job_dir / "preview.wav").resolve()
         if not guide.is_file() or guide.stat().st_size < 44:
             raise ValueError("Для гибрида сначала создай опорный WAV из MIDI (галочка WAV).")
