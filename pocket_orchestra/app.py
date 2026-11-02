@@ -268,7 +268,7 @@ def vocal_engine_start(payload: RenderRequest):
 def vocal_engine_poll(job_id: str):
     job = _jobdir(job_id)
     try:
-        status = ace_step.poll(job)
+        status = ace_step.poll(job, download=False)
     except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
         raise HTTPException(503, str(exc)[:250]) from exc
     if status.get("url_ready") or status.get("state") == "failed":
