@@ -4,6 +4,27 @@
 Веб-пульт на CORE: **http://192.168.0.100:9095** (по действующему LAN/VPN).
 **Все файлы проекта на CORE — в `/1tbdisk/muzikfed` на 2 ТБ диске.** Включая `.venv`, `outputs` и кэш `uv`. Файл user-unit остаётся в стандартной папке systemd в домашнем каталоге.
 
+## Уже установленный проект: ежедневная работа
+
+На CORE .100 установка завершена: `44 passed, 1 warning`, `pocket-orchestra.service` — `active (running)`, `/api/health` — `status=ok`. По состоянию на 2 ноября 2026 года **первое клонирование повторять не надо**.
+
+После коммитов из ChatGPT или GitHub (без `git clone`, без `git push` на сервере):
+
+```bash
+cd /1tbdisk/muzikfed
+bash scripts/update-core.sh
+bash scripts/check-core.sh
+```
+
+Для просмотра репозитория и истории без изменений:
+
+```bash
+git -C /1tbdisk/muzikfed status
+git -C /1tbdisk/muzikfed log -1 --oneline
+```
+
+Предупреждение `StarletteDeprecationWarning` относится к тестовому клиенту FastAPI; оно не блокирует запуск. Веб-пульт с Acer через VPN пока нужно проверить отдельно.
+
 ## Сценарий A. Загрузить всё из GitHub на сервер .100
 
 **Самый простой путь:** зайти с Acer по SSH в Ubuntu .100, выполнить:
