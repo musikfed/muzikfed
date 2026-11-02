@@ -100,3 +100,29 @@ def test_web_preview_direct_api_has_no_fake_midi():
     report = client.get(f"/api/artifacts/{data['job_id']}/report.json").json()
     assert report["composition"]["config"]["ai_duration"] == 20
     assert report["source_midi"] is None
+
+
+def test_selected_singer_is_passed_to_neural_prompt(tmp_path):
+    job = tmp_path / "voice"
+    job.mkdir()
+    (job / "report.json").write_text(json.dumps({"composition": {
+        "config": {"ensemble": "choir", "tempo": 84, "bars": 16,
+                   "prompt": "Русский романс с красивым тёплым голосом",
+                   "style": "lyrical", "vocal_timbre": "baritone",
+                   "ai_duration": 20},
+        "planning": {"resolved_style": "lyrical"}
+    }}, ensure_ascii=False), encoding="utf-8")
+    payload, _ = build_payload(job)
+    assert "baritone" in payload["prompt"]
+    assert payload["audio_duration"] == 20
+
+
+def test_singer_invalid_value_is_rejected():
+    with pytest.raises(ValueError, match="певческого голоса"):
+        Config(vocal_timbre="unknown")
+
+
+def test_voice_register_selector_is_saved_with_config():
+    html = TestClient(__import__("pocket_orchestra.app", fromlist=["app"]).app).get("/").text
+    assert 'id="vocalTimbre"' in html
+    assert "vocal_timbre:$('vocalTimbre').value" in html
