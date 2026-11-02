@@ -239,8 +239,15 @@ def generate(payload: GenerateRequest):
 def vocal_engine_status():
     state = gpu_control.state()
     engine = ace_step.status()
-    # Service may be installed but stopped to release VRAM.
-    return {**engine, **state, "available": state["ace_installed"] or engine["available"]}
+    # ACE-Step is normally STOPPED between jobs to free RTX memory.
+    # "available" means the button can start it; "running" means the local
+    # API actually responds now. Do not conflate the two states.
+    running = bool(engine["available"])
+    installed = bool(state["ace_installed"])
+    message = (engine["message"] if running or not installed else
+               "ACE-Step установлена и сейчас остановлена для освобождения RTX; запускается по кнопке.")
+    return {**engine, **state, "available": installed or running,
+            "running": running, "message": message}
 
 
 @app.get("/api/gpu/status")
