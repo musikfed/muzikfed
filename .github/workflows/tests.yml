@@ -12,6 +12,8 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - name: Check deployment shell syntax
         run: bash -n scripts/install-core.sh scripts/update-core.sh scripts/deploy-to-core.sh scripts/check-core.sh
+      - name: Validate live smoke tester syntax
+        run: python3 -m py_compile scripts/smoke-core.py
       - name: Run tests
         run: |
           uv sync --extra dev --python 3.12
