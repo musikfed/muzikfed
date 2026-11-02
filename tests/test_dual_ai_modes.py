@@ -151,3 +151,32 @@ def test_original_song_web_calls_direct_endpoint():
     page = TestClient(app).get("/").text
     assert "'/api/audio/project':'/api/generate'" in page
     assert "mode==='original'" in page
+
+
+def test_server_watcher_releases_gpu_after_audio_even_if_browser_closed(tmp_path, monkeypatch):
+    import importlib
+    module = importlib.import_module("pocket_orchestra.app")
+    released = []
+    monkeypatch.setattr(module, "_jobdir", lambda job_id: tmp_path)
+    monkeypatch.setattr(module.ace_step, "poll", lambda job: {
+        "state": "complete", "url_ready": True
+    })
+    monkeypatch.setattr(module.gpu_control, "release_audio",
+                        lambda job_id: released.append(job_id))
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    module._watch_audio_job("audio-1")
+    assert released == ["audio-1"]
+
+
+def test_browser_status_avoids_duplicate_wav_download(tmp_path, monkeypatch):
+    import importlib
+    module = importlib.import_module("pocket_orchestra.app")
+    monkeypatch.setattr(module, "_jobdir", lambda job_id: tmp_path)
+    called = []
+    def fake_poll(path, *, download=True):
+        called.append(download)
+        return {"state": "working", "url_ready": False}
+    monkeypatch.setattr(module.ace_step, "poll", fake_poll)
+    r = TestClient(app).get("/api/vocal/poll/12345678-1234-1234-1234-123456789abc")
+    assert r.status_code == 200
+    assert called == [False]
