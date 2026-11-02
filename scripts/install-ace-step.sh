@@ -49,13 +49,14 @@ Environment=ACESTEP_OFFLOAD_TO_CPU=true
 UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
-Restart=on-failure
+Restart=no
 RestartSec=10
 
 [Install]
 WantedBy=default.target
 EOF
 systemctl --user daemon-reload
+systemctl --user disable "$UNIT" >/dev/null 2>&1 || true
 echo "ACE-Step dependencies prepared on 2 TB disk. No model was started."
 echo "Next: bash $BASE/scripts/start-ace-step.sh"
 echo "Initial model download requires internet and free disk space; check progress in logs."
