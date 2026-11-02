@@ -21,7 +21,7 @@ def test_creation_mode_choices_and_group_mapping():
 def test_no_misleading_lyric_claim_in_ui():
     assert "Черновой WAV ещё не поёт русский текст" in WEB
     assert "синхронизированных отдельных вокальных WAV-стемов пока нет" in WEB
-    assert "Если отдельно подключена ACE-Step" in WEB
+    assert "Пока ACE-Step не установлена, голосового WAV нет" in WEB
     assert "FluidSynth не произносит русский текст" in WEB
     assert 'id="aceGenerate"' in WEB
 
