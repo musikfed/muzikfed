@@ -43,7 +43,11 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <div class="field"><label for="title">Название произведения</label><input id="title" value="Свет за горизонтом" maxlength="100"></div>
 <div class="field"><label for="prompt">Описание настроения, развития и звучания</label><textarea id="prompt" maxlength="4000">Тревожное начало на виолончелях; постепенно вступают деревянные духовые, развивается надежда. Затем величественная кульминация с валторнами и трубами, в конце светлая тихая кода.</textarea><div class="hint">Режим Ollama позволяет LLM предложить гармонию и мотив. Без Ollama работает автономный композитор с заданной музыкальной формой.</div></div>
 <div class="grid2"><div class="field"><label for="ensemble">Состав</label><select id="ensemble"><option value="orchestra" selected>Симфонический оркестр</option><option value="quartet">Струнный квартет</option><option value="choir">Нотный хор SATB (Ahh/Ooh/Mmm)</option><option value="orchestra_choir">Оркестр + SATB хор</option><option value="quartet_choir">Струнный квартет + SATB</option></select></div>
-<div class="field" id="choirVowelField"><label for="vowel">Гласная хора</label><select id="vowel"><option>Ahh</option><option>Ooh</option><option>Mmm</option></select></div></div><div class="hint" id="ensembleHelp" style="margin:-6px 0 14px"></div><div class="field"><label for="style">Стиль музыки</label><select id="style">
+<div class="field" id="choirVowelField"><label for="vowel">Гласная хора</label><select id="vowel"><option>Ahh</option><option>Ooh</option><option>Mmm</option></select></div></div><div class="hint" id="ensembleHelp" style="margin:-6px 0 14px"></div><div class="field"><label for="scoreEngine">Движок сочинения нот</label>
+<select id="scoreEngine"><option value="rules">Обычный нотный композитор (CPU)</option>
+<option value="ai_polyphony">ИИ-полифонист Qwen / Ollama — реальные ноты двух голосов</option></select>
+<div class="hint">Второй движок вызывает Qwen только для нот и контрапункта, затем освобождает VRAM. Качество уровня Баха не гарантируется; ноты сохраняются в MIDI/MusicXML.</div></div>
+<div class="field"><label for="style">Стиль музыки</label><select id="style">
 <option value="auto">Авто — по описанию</option>
 <option value="cinematic">Симфонический / кино</option>
 <option value="march">Торжественный марш</option>
@@ -52,9 +56,9 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <option value="opera">Оперная фразировка (ноты, пока без певца)</option>
 <option value="ambient">Атмосферный / спокойный</option>
 </select><div class="hint">Стиль меняет мелодическую ритмику. Он не включает нейровокал автоматически.</div></div>
-<div class="field" id="lyricsField"><label for="lyrics">Текст песни (русский) — свой или автоматический черновик</label>
-<textarea id="lyrics" maxlength="4000" placeholder="Оставь пустым для автоматического черновика. Или впиши свои стихи здесь…"></textarea>
-<div class="hint">Текст сохраняется в lyrics.txt и частично в нотах MusicXML. Черновой WAV по-прежнему без произнесения слов.</div></div>
+<div class="field" id="lyricsField"><label for="lyrics">Текст песни (русский) — свой, от Ollama или от ACE-Step</label>
+<textarea id="lyrics" maxlength="4000" placeholder="Впиши слова, либо оставь пустым: ACE-Step сочинит их по описанию; для MIDI-текста включи Ollama"></textarea>
+<div class="hint">Если вписаны стихи, они сохраняются в lyrics.txt и MusicXML. Если текст пуст, нейросеть ACE-Step сочинит слова из описания при запуске аудио; нотный WAV слов не произносит.</div></div>
 <div class="field" id="choirEntryField"><label for="choirEntry">Вступление хора</label><select id="choirEntry"><option value="-1">Авто — по промпту</option><option value="0">С самого начала</option><option value="0.25">После 25% пьесы</option><option value="0.5">После 50% пьесы</option><option value="0.75">После 75% пьесы</option></select></div></section>
 <section class="card"><h2>02 · Музыкальная форма</h2>
 <div class="grid3"><div class="field"><label for="key">Тональность</label><select id="key"><option>C</option><option>C#</option><option selected>D</option><option>Eb</option><option>E</option><option>F</option><option>F#</option><option>G</option><option>Ab</option><option>A</option><option>Bb</option><option>B</option></select></div>
@@ -72,7 +76,7 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <div class="grid2"><div class="field"><label for="seed">Seed — повторяемый результат</label><input id="seed" type="number" min="0" max="4294967295" value="42"></div><div class="field" id="modelField"><label for="model">Локальная модель Ollama</label><input id="model" value="qwen3:8b"></div></div>
 <div class="checkbox"><input type="checkbox" id="useOllama"><label for="useOllama">Подключить Ollama для вариантов гармонии и мелодии (необязательно)</label></div><p class="hint" id="llmHelp">LLM выключена: Python создаёт ноты сам. Для первого теста она не нужна.</p>
 <div class="checkbox"><input type="checkbox" id="render" checked><label for="render">Создать черновой WAV, если FluidSynth установлен</label></div>
-<button id="go" class="primary">✦ Сочинить и оркестровать</button><button id="reroll" class="secondary" style="width:100%;margin-top:10px">↻ Новая вариация (другой seed)</button><button id="resetSettings" class="secondary" style="width:100%;margin-top:10px">Сбросить сохранённые настройки</button>
+<button id="go" class="primary">✦ Создать партитуру MIDI / MusicXML</button><button id="reroll" class="secondary" style="width:100%;margin-top:10px">↻ Новая вариация (другой seed)</button><button id="resetSettings" class="secondary" style="width:100%;margin-top:10px">Сбросить сохранённые настройки</button>
 <p class="hint" id="saveStatus">Настройки автоматически сохраняются в этом браузере при изменении.</p><p class="hint" id="working"></p></section>
 </div><div class="right">
 <section class="card" id="monitorCard"><div class="sectionhead"><h2>Мониторинг Huananzhi CORE .100</h2><span class="pill" id="monStatus">Подключение…</span></div>
@@ -100,10 +104,12 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <p class="hint">Воспроизведение WAV пока НЕ произносит текст; для настоящего русского вокала нужна отдельная модель.</p></div>
 <p class="hint">MusicXML открой на Windows .103 в MuseScore Studio 4 с MuseSounds Core. Там же экспортируй качественный WAV. Быстрый WAV здесь — только черновой. Черновой WAV FluidSynth не произносит русский текст. Для настоящего вокала подключается отдельная ACE-Step; слова доступны в lyrics.txt.</p></section>
 <section class="card" id="neuralCard">
-<div class="sectionhead"><h2>Настоящий вокал · ACE-Step 1.5</h2><span class="pill" id="aceStatus">Проверка модели...</span></div>
-<p class="hint">Отдельный необязательный нейродвижок RTX 3060. Он генерирует песню по словам и стилю, НЕ обязан петь точно написанную MIDI-мелодию и не гарантирует отдельные голосовые дорожки.</p>
-<button type="button" class="secondary" id="aceGenerate" disabled style="width:100%">Создать нейропесню с русским голосом</button>
-<p class="hint" id="aceMessage">Для запуска сначала создай хор или оркестр+хор с текстом. Затем подключи локальную ACE-Step 1.5 на CORE.</p>
+<div class="sectionhead"><h2>ИИ-песни и гибрид · RTX 3060</h2><span class="pill" id="aceStatus">Проверка модели...</span></div>
+<p class="hint">Обе кнопки используют текущий промпт, стиль, темп и слова. Не случайные шаблоны: ACE-Step получает полный запрос. Модель включается только по требованию и после окончания освобождает RTX.</p>
+<button type="button" class="primary" id="aceGenerate" disabled style="width:100%">🎤 Создать полноценную песню по промпту</button>
+<button type="button" class="secondary" id="aceHybrid" disabled style="width:100%;margin-top:10px">🎼 Гибрид: MIDI-аранжировка → нейросетевой WAV</button>
+<p class="hint">Первая кнопка — самостоятельный аудиогенератор, без обязательного предварительного MIDI. Вторая — сначала нотная партитура, затем ACE-Step cover. Результат cover может менять исходные ноты.</p>
+<p class="hint" id="aceMessage">Для нейропесен нужно один раз установить ACE-Step на CORE; далее она будет запускаться по нажатию кнопки.</p>
 <div id="aceOutput" class="hide"><audio id="aceAudio" controls preload="none"></audio><a id="aceLink" class="download" style="display:block">Скачать нейропесню WAV</a></div>
 </section>
 <section class="card results" id="qualityCard"><div class="sectionhead"><h2>Контроль музыкальной структуры</h2><span id="passCount" class="pill"></span></div><div class="quality" id="checks"></div><div class="info"><span>Всего нот: <strong id="noteCount"></strong></span><span>Опорные созвучия: <strong id="chordRatio"></strong></span><span>Скачки > октавы: <strong id="leapRatio"></strong></span></div><div id="warnings" class="hint"></div><p class="note">Эти проверки находят технические ошибки, но не доказывают музыкальную выразительность. Художественное качество оценивают по прослушиванию финального WAV.</p></section>
@@ -134,7 +140,7 @@ function selectCreationMode(){
   preview();
 }
 
-function config(){return {title:$('title').value,prompt:$('prompt').value,ensemble:$('ensemble').value,key:$('key').value,mode:$('mode').value,tempo:+$('tempo').value,bars:+$('bars').value,density:+$('density').value/100,tension:+$('tension').value/100,expression:+$('expression').value/100,humanize:+$('humanize').value/100,brass_level:+$('brass').value/100,choir_entry:+$('choirEntry').value,climax:+$('climax').value/100,seed:+$('seed').value,choir_vowel:$('vowel').value,use_ollama:$('useOllama').checked,model:$('model').value,style:$('style').value,lyrics:$('lyrics').value};}
+function config(){return {title:$('title').value,prompt:$('prompt').value,ensemble:$('ensemble').value,key:$('key').value,mode:$('mode').value,tempo:+$('tempo').value,bars:+$('bars').value,density:+$('density').value/100,tension:+$('tension').value/100,expression:+$('expression').value/100,humanize:+$('humanize').value/100,brass_level:+$('brass').value/100,choir_entry:+$('choirEntry').value,climax:+$('climax').value/100,seed:+$('seed').value,choir_vowel:$('vowel').value,use_ollama:$('useOllama').checked,model:$('model').value,style:$('style').value,lyrics:$('lyrics').value,score_engine:$('scoreEngine').value};}
 function renderTimeline(bars){const c=$('timeline');c.replaceChildren();for(let i=0;i<bars;i++){const el=document.createElement('div');el.className='bar '+['a','b','c','d'][Math.floor(i/4)%4];el.title='Такт '+(i+1)+' · '+['A','A′','B','A″'][Math.floor(i/4)%4];c.append(el)}}
 const ensembleDescriptions={
 orchestra:'12 инструментальных партий. Без хора и вокала. WAV — черновой FluidSynth.',
@@ -152,7 +158,7 @@ $('modelField').classList.toggle('hide',!c.use_ollama);
 $('ensembleHelp').textContent=ensembleDescriptions[c.ensemble];
 $('llmHelp').textContent=c.use_ollama?'Ollama должна работать на CORE: 127.0.0.1:11434, модель '+c.model+'. Она предлагает мотив, гармонию и для хора черновик русских слов; при ошибке работает обычный композитор.':'LLM выключена: Python создаёт ноты сам, для хора слова — простой редактируемый черновик. Включи Ollama для AI-текста.';
 for(const name of vals){$(name+'Value').textContent=name==='tempo'?c.tempo+' BPM':Math.round((name==='brass'?c.brass_level:c[name])*100)+'%'}$('duration').textContent=Math.round(c.bars*4*60/c.tempo)+' сек.';$('pieceTitle').textContent=c.title;$('pieceCaption').textContent=c.key+' '+c.mode+' · '+c.tempo+' BPM · '+c.bars+' тактов · '+{orchestra:'Оркестр',quartet:'Струнный квартет',quartet_choir:'Струнный квартет + SATB',choir:'Вокальный SATB',orchestra_choir:'Оркестр и SATB'}[c.ensemble];renderTimeline(c.bars)}
-for(const key of [...vals,'title','key','mode','bars','choirEntry','useOllama','model','style','lyrics']) $(key).addEventListener('input',preview);
+for(const key of [...vals,'title','key','mode','bars','choirEntry','useOllama','model','style','lyrics','scoreEngine']) $(key).addEventListener('input',preview);
 $('ensemble').addEventListener('change',preview);
 $('creationMode').addEventListener('change',selectCreationMode);
 // Browser-only persistence. No settings are uploaded except on Generate.
@@ -242,52 +248,71 @@ setInterval(pollMonitor,3000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollMonitor()});
 
 // Optional separate neural song engine, not a hidden dependency of the score renderer.
-let aceAvailable=false, acePollTimer=null;
+let aceAvailable=false, acePollTimer=null, aceBusy=false;
+function setAceButtons(busy){
+  $('aceGenerate').disabled=busy||!aceAvailable;
+  $('aceHybrid').disabled=busy||!aceAvailable;
+}
 async function aceRefresh(){
   try{
     const r=await fetch('/api/vocal/status',{cache:'no-store'});
     const d=await r.json();
     aceAvailable=!!d.available;
-    $('aceStatus').textContent=aceAvailable?'Локальная модель отвечает':'Не подключено';
-    $('aceGenerate').disabled=!aceAvailable;
-    if(!aceAvailable)$('aceMessage').textContent='ACE-Step не установлена или не запущена. Обычная партитура и черновой WAV работают без неё. См. docs/LYRICS_AND_VOCALS.md.';
-  }catch(e){$('aceStatus').textContent='Не подключено';aceAvailable=false;$('aceGenerate').disabled=true}
+    $('aceStatus').textContent=d.audio_job_active?'RTX занята песней':
+      d.ace_installed?'Установлена · запуск по кнопке':d.available?'Модель работает':'Не установлена';
+    setAceButtons(aceBusy||!!d.audio_job_active);
+    if(!aceAvailable)$('aceMessage').textContent='Для готовых песен нужна ACE-Step 1.5. На CORE: bash scripts/install-ace-step.sh. После установки кнопки будут сами запускать и выключать модель.';
+  }catch(e){aceAvailable=false;$('aceStatus').textContent='Нет связи';setAceButtons(true)}
 }
 aceRefresh();
-$('aceGenerate').addEventListener('click',async()=>{
-  if(!aceAvailable)return;
-  if(!lastJob){$('aceMessage').textContent='Сначала сочини хор или оркестр + хор, чтобы появился lyrics.txt.';return;}
-  if(!window.confirm('Запустить отдельную генерацию нейропесни на RTX? Это может занять время и не будет точно совпадать с MIDI.'))return;
-  $('aceGenerate').disabled=true;
-  $('aceOutput').classList.add('hide');
-  $('aceMessage').textContent='ACE-Step принимает задачу...';
+async function createAiSong(mode){
+  if(!aceAvailable||aceBusy)return;
+  if(!window.confirm(mode==='guided'?'Создать MIDI и переработать его нейросетью? Мелодия может измениться.':'Создать новую песню прямо по текущему промпту и тексту на RTX 3060?'))return;
+  aceBusy=true;setAceButtons(true);$('aceOutput').classList.add('hide');
   try{
-    const r=await fetch('/api/vocal/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_id:lastJob})});
+    $('aceMessage').textContent='Создаём музыкальный проект по твоим параметрам...';
+    // A dedicated click always uses the CURRENT prompt; never a stale previous job.
+    const cfg=config();
+    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({config:cfg,render_preview:mode==='guided'})});
     const d=await r.json();
-    if(!r.ok)throw Error(d.detail||'Ошибка ACE-Step');
-    $('aceMessage').textContent='Нейросеть обрабатывает текст. Пока она работает, можно наблюдать за VRAM в мониторе.';
-    const job=lastJob;
+    if(!r.ok)throw Error(typeof d.detail==='string'?d.detail:JSON.stringify(d.detail));
+    const job=d.job_id;
+    lastJob=job;
+    $('aceMessage').textContent='Освобождаем RTX от Ollama, запускаем ACE-Step и загружаем модель при необходимости...';
+    const sr=await fetch('/api/vocal/start',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({job_id:job,mode})});
+    const task=await sr.json();
+    if(!sr.ok)throw Error(task.detail||'ACE-Step не приняла задачу');
+    $('aceMessage').textContent=mode==='guided'?'Нейросеть улучшает звучание MIDI-ориентира...':'Нейросеть пишет новую песню по описанию и словам...';
     if(acePollTimer)clearTimeout(acePollTimer);
     const poll=async()=>{
       try{
         const p=await fetch('/api/vocal/poll/'+encodeURIComponent(job),{cache:'no-store'});
         const v=await p.json();
-        if(!p.ok)throw Error(v.detail||'Ошибка статуса');
+        if(!p.ok)throw Error(v.detail||'Ошибка проверки аудио');
         if(v.state==='complete'&&v.wav_url){
-          $('aceMessage').textContent='Нейропесня готова. Это новая генерация, не точный рендер нот.';
+          $('aceMessage').textContent='Готовая нейропесня! RTX освобождается. Качество оценивай по звучанию и дикции.';
           $('aceAudio').src=v.wav_url;
           $('aceLink').href=v.wav_url;$('aceLink').setAttribute('download','neural_song.wav');
-          $('aceOutput').classList.remove('hide');$('aceGenerate').disabled=false;
+          $('aceOutput').classList.remove('hide');
+          aceBusy=false;setAceButtons(false);aceRefresh();
         }else if(v.state==='failed'){
-          $('aceMessage').textContent=v.message||'Нейросеть завершилась с ошибкой';$('aceGenerate').disabled=false;
-        }else{
-          acePollTimer=setTimeout(poll,5000);
-        }
-      }catch(e){$('aceMessage').textContent='Ошибка проверки нейропесни: '+e.message;$('aceGenerate').disabled=false;}
+          $('aceMessage').textContent=v.message||'Ошибка нейросинтеза';aceBusy=false;setAceButtons(false);aceRefresh();
+        }else{acePollTimer=setTimeout(poll,5000);}
+      }catch(error){
+        $('aceMessage').textContent='Ошибка: '+error.message;
+        aceBusy=false;setAceButtons(false);aceRefresh();
+      }
     };
     acePollTimer=setTimeout(poll,5000);
-  }catch(e){$('aceMessage').textContent='Нейровокал не запустился: '+e.message;$('aceGenerate').disabled=false;}
-});
+  }catch(e){
+    $('aceMessage').textContent='Не удалось создать песню: '+e.message;
+    aceBusy=false;setAceButtons(false);
+  }
+}
+$('aceGenerate').addEventListener('click',()=>createAiSong('original'));
+$('aceHybrid').addEventListener('click',()=>createAiSong('guided'));
 
 function link(id,url){const e=$(id);e.href=url;e.classList.remove('disabled');e.setAttribute('download','')}
 $('reroll').addEventListener('click',()=>{$('seed').value=(Number($('seed').value)+1)%4294967296;saveSettings();$('go').click()});
