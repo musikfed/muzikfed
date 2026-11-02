@@ -69,6 +69,16 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <option value="chiptune">8-bit / Dendy — игровая мелодия</option>
 <option value="synthwave">Synthwave / электронная музыка</option>
 </select><div class="hint">Стиль влияет на мелодию и оркестровку. Для настоящих 8-bit MIDI-партий выбери состав «8-bit / Dendy». Вокал создаётся отдельной кнопкой.</div></div>
+<div class="field" id="vocalTimbreField"><label for="vocalTimbre">Желаемый певческий голос для ACE-Step</label>
+<select id="vocalTimbre">
+<option value="auto">Авто — по промпту и стилю</option>
+<option value="soprano">Высокое женское сопрано</option>
+<option value="mezzo">Тёплое меццо-сопрано</option>
+<option value="tenor">Мужской лирический тенор</option>
+<option value="baritone">Мужской баритон</option>
+<option value="bass">Глубокий мужской бас</option>
+<option value="duet">Дуэт — мужской и женский голоса</option>
+</select><div class="hint">Подсказка для нейросети, а не гарантированный выбор тембра; MIDI-хор по-прежнему не произносит слова.</div></div>
 <div class="field" id="lyricsField"><label for="lyrics">Текст песни (русский) — свой, от Ollama или от ACE-Step</label>
 <textarea id="lyrics" maxlength="4000" placeholder="Впиши слова, либо оставь пустым: ACE-Step сочинит их по описанию; для MIDI-текста включи Ollama"></textarea>
 <div class="hint">Если вписаны стихи, они сохраняются в lyrics.txt и MusicXML. Если текст пуст, нейросеть ACE-Step сочинит слова из описания при запуске аудио; нотный WAV слов не произносит.</div></div>
@@ -189,7 +199,7 @@ $('usePromptPreset').addEventListener('click',()=>{
   preview();
   saveSettings();
 });
-function config(){return {title:$('title').value,prompt:$('prompt').value,ensemble:$('ensemble').value,key:$('key').value,mode:$('mode').value,tempo:+$('tempo').value,bars:+$('bars').value,density:+$('density').value/100,tension:+$('tension').value/100,expression:+$('expression').value/100,humanize:+$('humanize').value/100,brass_level:+$('brass').value/100,choir_entry:+$('choirEntry').value,climax:+$('climax').value/100,seed:+$('seed').value,choir_vowel:$('vowel').value,use_ollama:$('useOllama').checked,model:$('model').value,style:$('style').value,lyrics:$('lyrics').value,score_engine:$('scoreEngine').value,ai_duration:+$('aiDuration').value};}
+function config(){return {title:$('title').value,prompt:$('prompt').value,ensemble:$('ensemble').value,key:$('key').value,mode:$('mode').value,tempo:+$('tempo').value,bars:+$('bars').value,density:+$('density').value/100,tension:+$('tension').value/100,expression:+$('expression').value/100,humanize:+$('humanize').value/100,brass_level:+$('brass').value/100,choir_entry:+$('choirEntry').value,climax:+$('climax').value/100,seed:+$('seed').value,choir_vowel:$('vowel').value,use_ollama:$('useOllama').checked,model:$('model').value,style:$('style').value,lyrics:$('lyrics').value,vocal_timbre:$('vocalTimbre').value,score_engine:$('scoreEngine').value,ai_duration:+$('aiDuration').value};}
 function renderTimeline(bars){const c=$('timeline');c.replaceChildren();for(let i=0;i<bars;i++){const el=document.createElement('div');el.className='bar '+['a','b','c','d'][Math.floor(i/4)%4];el.title='Такт '+(i+1)+' · '+['A','A′','B','A″'][Math.floor(i/4)%4];c.append(el)}}
 const ensembleDescriptions={
 orchestra:'12 инструментальных партий. Без хора и вокала. MP3 — проверка FluidSynth.',
@@ -204,6 +214,7 @@ function preview(){let c=config();const hasChoir=['choir','orchestra_choir','qua
 $('choirVowelField').classList.toggle('hide',!hasChoir);
 $('choirEntryField').classList.toggle('hide',!hasChoir);
 $('lyricsField').classList.toggle('hide',!hasChoir);
+$('vocalTimbreField').classList.toggle('hide',!hasChoir);
 $('brassField').classList.toggle('hide',!hasBrass);
 $('modelField').classList.toggle('hide',!c.use_ollama&&c.score_engine!=='ai_polyphony');
 $('ensembleHelp').textContent=ensembleDescriptions[c.ensemble];
