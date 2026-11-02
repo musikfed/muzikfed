@@ -107,11 +107,22 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <section class="card" id="neuralCard">
 <div class="sectionhead"><h2>ИИ-песни и гибрид · RTX 3060</h2><span class="pill" id="aceStatus">Проверка модели...</span></div>
 <p class="hint">Обе кнопки используют текущий промпт, стиль, темп и слова. Не случайные шаблоны: ACE-Step получает полный запрос. Модель включается только по требованию и после окончания освобождает RTX.</p>
+<div class="field"><label for="aiDuration">Длительность нейросетевой песни · отдельно от MIDI</label>
+<select id="aiDuration">
+<option value="0">Как в партитуре (16 тактов ≈ 41 сек.)</option>
+<option value="60">1 минута</option>
+<option value="120">2 минуты</option>
+<option value="180">3 минуты</option>
+<option value="300" selected>5 минут</option>
+<option value="480">8 минут (максимум с LM на RTX 3060)</option>
+<option value="600">10 минут (без музыкальной LM, свой текст песни)</option>
+</select>
+<div class="hint">Длительность AI-аудио не зависит от тактов MIDI. Для гибрида число тактов увеличится автоматически. На 12 ГБ 8 мин — предел с LM; 10 мин — без неё. Объём MP3 примерно 2 МБ/мин.</div></div>
 <button type="button" class="primary" id="aceGenerate" disabled style="width:100%">🎤 Создать полноценную песню по промпту</button>
 <button type="button" class="secondary" id="aceHybrid" disabled style="width:100%;margin-top:10px">🎼 Гибрид: MIDI-аранжировка → нейросетевой WAV</button>
 <p class="hint">Первая кнопка — самостоятельный аудиогенератор, без обязательного предварительного MIDI. Вторая — сначала нотная партитура, затем ACE-Step cover. Результат cover может менять исходные ноты.</p>
 <p class="hint" id="aceMessage">Для нейропесен нужно один раз установить ACE-Step на CORE; далее она будет запускаться по нажатию кнопки.</p>
-<div id="aceOutput" class="hide"><audio id="aceAudio" controls preload="none"></audio><a id="aceLink" class="download" style="display:block">Скачать нейропесню WAV</a></div>
+<div id="aceOutput" class="hide"><audio id="aceAudio" controls preload="none"></audio><a id="aceLink" class="download" style="display:block">Скачать готовую песню MP3</a></div>
 </section>
 <section class="card results" id="qualityCard"><div class="sectionhead"><h2>Контроль музыкальной структуры</h2><span id="passCount" class="pill"></span></div><div class="quality" id="checks"></div><div class="info"><span>Всего нот: <strong id="noteCount"></strong></span><span>Опорные созвучия: <strong id="chordRatio"></strong></span><span>Скачки > октавы: <strong id="leapRatio"></strong></span></div><div id="warnings" class="hint"></div><p class="note">Эти проверки находят технические ошибки, но не доказывают музыкальную выразительность. Художественное качество оценивают по прослушиванию финального WAV.</p></section>
 <section class="card" id="serviceCard">
@@ -141,7 +152,7 @@ function selectCreationMode(){
   preview();
 }
 
-function config(){return {title:$('title').value,prompt:$('prompt').value,ensemble:$('ensemble').value,key:$('key').value,mode:$('mode').value,tempo:+$('tempo').value,bars:+$('bars').value,density:+$('density').value/100,tension:+$('tension').value/100,expression:+$('expression').value/100,humanize:+$('humanize').value/100,brass_level:+$('brass').value/100,choir_entry:+$('choirEntry').value,climax:+$('climax').value/100,seed:+$('seed').value,choir_vowel:$('vowel').value,use_ollama:$('useOllama').checked,model:$('model').value,style:$('style').value,lyrics:$('lyrics').value,score_engine:$('scoreEngine').value};}
+function config(){return {title:$('title').value,prompt:$('prompt').value,ensemble:$('ensemble').value,key:$('key').value,mode:$('mode').value,tempo:+$('tempo').value,bars:+$('bars').value,density:+$('density').value/100,tension:+$('tension').value/100,expression:+$('expression').value/100,humanize:+$('humanize').value/100,brass_level:+$('brass').value/100,choir_entry:+$('choirEntry').value,climax:+$('climax').value/100,seed:+$('seed').value,choir_vowel:$('vowel').value,use_ollama:$('useOllama').checked,model:$('model').value,style:$('style').value,lyrics:$('lyrics').value,score_engine:$('scoreEngine').value,ai_duration:+$('aiDuration').value};}
 function renderTimeline(bars){const c=$('timeline');c.replaceChildren();for(let i=0;i<bars;i++){const el=document.createElement('div');el.className='bar '+['a','b','c','d'][Math.floor(i/4)%4];el.title='Такт '+(i+1)+' · '+['A','A′','B','A″'][Math.floor(i/4)%4];c.append(el)}}
 const ensembleDescriptions={
 orchestra:'12 инструментальных партий. Без хора и вокала. WAV — черновой FluidSynth.',
@@ -165,7 +176,7 @@ $('ensemble').addEventListener('change',preview);
 $('creationMode').addEventListener('change',selectCreationMode);
 // Browser-only persistence. No settings are uploaded except on Generate.
 const SETTINGS_KEY='pocket-orchestra-settings-v2';
-const formFields=[...document.querySelectorAll('.left input[id],.left select[id],.left textarea[id]')];
+const formFields=[...document.querySelectorAll('.left input[id],.left select[id],.left textarea[id]'),$('aiDuration')];
 function saveSettings(){
   const values={};
   for(const el of formFields)values[el.id]=el.type==='checkbox'?el.checked:el.value;
@@ -289,9 +300,15 @@ async function createAiSong(mode){
     $('aceMessage').textContent=mode==='original'?'Передаём твой промпт напрямую аудиомодели...':'Сочиняем реальную MIDI-партитуру для гибрида...';
     // Original audio is directly text-to-song. Only hybrid requires score/MIDI first.
     const cfg=config();
+    if(mode==='guided'&&cfg.ai_duration){
+      const requiredBars=Math.max(8,Math.round(cfg.ai_duration*cfg.tempo/240/4)*4);
+      if(requiredBars>512)throw Error('В выбранном темпе гибриду нужно '+requiredBars+' тактов (лимит 512). Уменьши темп или длительность.');
+      cfg.bars=requiredBars;
+      $('aceMessage').textContent='Гибрид: создаём '+requiredBars+' MIDI-тактов под '+cfg.ai_duration+' сек AI-звучания...';
+    }
     const endpoint=mode==='original'?'/api/audio/project':'/api/generate';
     const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({config:cfg,render_preview:mode==='guided'})});
+      body:JSON.stringify({config:cfg,render_preview:mode==='guided',guide_for_ai:mode==='guided'})});
     const d=await r.json();
     if(!r.ok)throw Error(typeof d.detail==='string'?d.detail:JSON.stringify(d.detail));
     const job=d.job_id;
@@ -308,10 +325,10 @@ async function createAiSong(mode){
         const p=await fetch('/api/vocal/poll/'+encodeURIComponent(job),{cache:'no-store'});
         const v=await p.json();
         if(!p.ok)throw Error(v.detail||'Ошибка проверки аудио');
-        if(v.state==='complete'&&v.wav_url){
-          $('aceMessage').textContent='Готовая нейропесня! RTX освобождается. Качество оценивай по звучанию и дикции.';
-          $('aceAudio').src=v.wav_url;
-          $('aceLink').href=v.wav_url;$('aceLink').setAttribute('download','neural_song.wav');
+        if(v.state==='complete'&&v.mp3_url){
+          $('aceMessage').textContent='Готовый MP3! RTX освобождается. Качество оценивай по звучанию и дикции.';
+          $('aceAudio').src=v.mp3_url;
+          $('aceLink').href=v.mp3_url;$('aceLink').setAttribute('download','neural_song.mp3');
           $('aceOutput').classList.remove('hide');
           aceBusy=false;setAceButtons(false);aceRefresh();
         }else if(v.state==='failed'){
@@ -339,7 +356,7 @@ if(d.urls['lyrics.txt']){
   $('lyricsText').textContent=d.lyrics||'';
   link('lyricsLink',d.urls['lyrics.txt']);
 }
-$('layerLinks').replaceChildren();for(const [kind,label] of [['choir.musicxml','Хор · MusicXML'],['choir.mid','Хор · MIDI'],['orchestra.musicxml','Оркестр · MusicXML'],['orchestra.mid','Оркестр · MIDI'],['quartet.musicxml','Квартет · MusicXML'],['quartet.mid','Квартет · MIDI']]){if(d.urls[kind]){const a=document.createElement('a');a.className='download';a.href=d.urls[kind];a.setAttribute('download','');a.textContent=label;$('layerLinks').append(a)}}$('audio').replaceChildren();if(d.urls.wav){const a=document.createElement('audio');a.controls=true;a.preload='none';a.src=d.urls.wav;$('audio').append(a)}$('checks').replaceChildren();for(const x of d.quality.checks){const el=document.createElement('div');el.className='check';const ico=document.createElement('strong');ico.className=x.ok?'ok':'bad';ico.textContent=x.ok?'✓':'!';const caption=document.createElement('span');caption.textContent=x.description;el.append(ico,caption);$('checks').append(el)}$('passCount').textContent=d.quality.passed+'/'+d.quality.total+' проверок';$('noteCount').textContent=d.quality.statistics.notes;$('chordRatio').textContent=Math.round(d.quality.statistics.strong_beat_chord_ratio*100)+'%';$('leapRatio').textContent=Math.round(d.quality.statistics.leap_rate*100)+'%';$('warnings').textContent=d.quality.warnings.join(' · ');$('working').textContent='Готово. Скачай партитуру и открой в MuseScore Studio на GRAPHICS .103.';}catch(e){$('working').textContent='Ошибка: '+e.message;$('currentState').textContent='Ошибка генерации';}finally{btn.disabled=false;btn.textContent='✦ Создать партитуру MIDI / MusicXML'}});
+$('layerLinks').replaceChildren();for(const [kind,label] of [['choir.musicxml','Хор · MusicXML'],['choir.mid','Хор · MIDI'],['orchestra.musicxml','Оркестр · MusicXML'],['orchestra.mid','Оркестр · MIDI'],['quartet.musicxml','Квартет · MusicXML'],['quartet.mid','Квартет · MIDI']]){if(d.urls[kind]){const a=document.createElement('a');a.className='download';a.href=d.urls[kind];a.setAttribute('download','');a.textContent=label;$('layerLinks').append(a)}}$('audio').replaceChildren();if(d.urls.mp3){const a=document.createElement('audio');a.controls=true;a.preload='none';a.src=d.urls.mp3;$('audio').append(a)}$('checks').replaceChildren();for(const x of d.quality.checks){const el=document.createElement('div');el.className='check';const ico=document.createElement('strong');ico.className=x.ok?'ok':'bad';ico.textContent=x.ok?'✓':'!';const caption=document.createElement('span');caption.textContent=x.description;el.append(ico,caption);$('checks').append(el)}$('passCount').textContent=d.quality.passed+'/'+d.quality.total+' проверок';$('noteCount').textContent=d.quality.statistics.notes;$('chordRatio').textContent=Math.round(d.quality.statistics.strong_beat_chord_ratio*100)+'%';$('leapRatio').textContent=Math.round(d.quality.statistics.leap_rate*100)+'%';$('warnings').textContent=d.quality.warnings.join(' · ');$('working').textContent='Готово. Скачай партитуру и открой в MuseScore Studio на GRAPHICS .103.';}catch(e){$('working').textContent='Ошибка: '+e.message;$('currentState').textContent='Ошибка генерации';}finally{btn.disabled=false;btn.textContent='✦ Создать партитуру MIDI / MusicXML'}});
 
 $('stopCore').addEventListener('click',async()=>{
   const out=$('stopResult');
