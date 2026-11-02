@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - name: Check deployment shell syntax
-        run: bash -n scripts/install-core.sh scripts/update-core.sh scripts/deploy-to-core.sh scripts/check-core.sh
+        run: bash -n scripts/install-core.sh scripts/update-core.sh scripts/deploy-to-core.sh scripts/check-core.sh scripts/service-core.sh scripts/start-core.sh scripts/stop-core.sh scripts/restart-core.sh scripts/status-core.sh scripts/show-control-token.sh
       - name: Validate live smoke tester syntax
         run: python3 -m py_compile scripts/smoke-core.py
       - name: Run tests
