@@ -155,7 +155,8 @@ def collect_metrics() -> dict:
                  "percent": _percent(stat[0], stat[1])}
                 for socket_id, stat in sorted(socket_deltas.items())
             ]
-            proc_total = os.times().user + os.times().system
+            process_times = os.times()
+            proc_total = process_times.user + process_times.system
             previous_proc = _PROC_LAST
             _PROC_LAST = (now, proc_total)
             proc_pct = None
