@@ -191,7 +191,7 @@ def render_job(payload: RenderRequest):
 
 @app.get("/api/artifacts/{job_id}/{filename}")
 def artifact(job_id: str, filename: str):
-    if filename not in ("score.musicxml", "score.mid", "report.json", "preview.wav", "lyrics.txt", "choir.musicxml", "choir.mid", "orchestra.musicxml", "orchestra.mid", "quartet.musicxml", "quartet.mid"):
+    if filename not in ("score.musicxml", "score.mid", "report.json", "preview.wav", "lyrics.txt", "choir.musicxml", "choir.mid", "orchestra.musicxml", "orchestra.mid", "quartet.musicxml", "quartet.mid", "neural_song.wav"):
         raise HTTPException(404, "Unsupported artifact")
     path = _jobdir(job_id) / filename
     if not path.is_file():
