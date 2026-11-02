@@ -44,12 +44,15 @@ ExecStart=$UV run --project $ENGINE acestep-api
 Environment=HF_HOME=$BASE/.cache/huggingface
 Environment=UV_CACHE_DIR=$BASE/.cache/uv
 Environment=ACESTEP_CHECKPOINTS_DIR=$ENGINE/checkpoints
+Environment=ACESTEP_API_HOST=127.0.0.1
+Environment=ACESTEP_API_PORT=8001
 Environment=ACESTEP_INIT_LLM=auto
 Environment=ACESTEP_OFFLOAD_TO_CPU=true
 UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
 Restart=no
+RuntimeMaxSec=3600
 RestartSec=10
 
 [Install]
