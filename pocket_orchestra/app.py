@@ -33,6 +33,7 @@ app.include_router(control_router)
 class GenerateRequest(BaseModel):
     config: dict
     render_preview: bool = True
+    guide_for_ai: bool = False
 
 
 class RenderRequest(BaseModel):
@@ -76,20 +77,40 @@ def _jobdir(job_id: str) -> Path:
     return location
 
 
-def _render(path: Path) -> str:
+def _render(path: Path, *, guide_for_ai: bool = False) -> str:
+    """FluidSynth renders a temporary WAV, then produces only an MP3 listening file.
+
+    For a hybrid ACE-Step cover, keep the source WAV until the AI has finished.
+    """
     if not shutil.which("fluidsynth"):
-        return "Предпросмотр недоступен: не установлен fluidsynth"
+        return "Предпросмотр недоступен: не установлен FluidSynth"
     if not SOUNDFONT.is_file():
         return "Предпросмотр недоступен: SoundFont SF2 не найден"
+    source = path / "preview.wav"
     try:
-        result = subprocess.run(["fluidsynth", "-ni", "-F", str(path / "preview.wav"),
+        result = subprocess.run(["fluidsynth", "-ni", "-F", str(source),
                                  str(SOUNDFONT), str(path / "score.mid")],
-                                capture_output=True, text=True, timeout=180, check=False)
-    except (OSError, subprocess.TimeoutExpired) as e:
-        return "Рендер завершился ошибкой: " + str(e)[:200]
-    if result.returncode or not (path / "preview.wav").is_file():
-        return "Ошибка FluidSynth: " + result.stderr[-350:]
-    return "Черновой WAV создан с помощью FluidSynth; не путать с финальным MuseSounds"
+                                capture_output=True, text=True, timeout=240, check=False)
+        if result.returncode or not source.is_file():
+            return "Ошибка FluidSynth: " + result.stderr[-350:]
+        if guide_for_ai:
+            return "Временный WAV из MIDI готов для ACE-Step cover; после получения MP3 он удалится."
+        encoder = shutil.which("ffmpeg")
+        if not encoder:
+            return "Для компактного MIDI-предпрослушивания установи ffmpeg: sudo apt install -y ffmpeg"
+        mp3 = path / "preview.mp3"
+        result = subprocess.run([encoder, "-hide_banner", "-nostdin", "-loglevel",
+                                 "error", "-y", "-i", str(source), "-c:a", "libmp3lame",
+                                 "-b:a", "192k", str(mp3)],
+                                capture_output=True, text=True, timeout=240, check=False)
+        if result.returncode or not mp3.is_file():
+            return "Ошибка MP3-конвертации: " + result.stderr[-250:]
+        return "Предпрослушивание создано в MP3 через FluidSynth (не MuseSounds)."
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return "Рендер завершился ошибкой: " + str(exc)[:200]
+    finally:
+        if not guide_for_ai:
+            source.unlink(missing_ok=True)
 
 
 @app.post("/api/audio/project")
@@ -197,7 +218,7 @@ def generate(payload: GenerateRequest):
                     "lyrics_note": "Если введены или получены настоящие стихи — они в lyrics.txt; FluidSynth слов не произносит",
                     "renderer": "Final audio should be exported from MuseScore Studio + MuseSounds on .103"}
         (out / "report.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-        render_message = _render(out) if payload.render_preview else "Черновой WAV не запрошен"
+        render_message = _render(out, guide_for_ai=payload.guide_for_ai) if payload.render_preview else "Предпрослушивание не запрошено"
     except Exception:
         shutil.rmtree(out, ignore_errors=True)
         raise
@@ -207,8 +228,8 @@ def generate(payload: GenerateRequest):
     for name in ("lyrics.txt", "choir.musicxml", "choir.mid", "orchestra.musicxml", "orchestra.mid", "quartet.musicxml", "quartet.mid", "neural_song.wav"):
         if (out / name).is_file():
             urls[name] = f"/api/artifacts/{job_id}/{name}"
-    if (out / "preview.wav").is_file():
-        urls["wav"] = f"/api/artifacts/{job_id}/preview.wav"
+    if (out / "preview.mp3").is_file():
+        urls["mp3"] = f"/api/artifacts/{job_id}/preview.mp3"
     return {"job_id": job_id, "urls": urls, "quality": report, "llm": llm_message,
             "lyrics": lyrics_text, "lyrics_sung": False,
             "render": render_message, "composition": piece.summary()}
@@ -294,7 +315,7 @@ def render_job(payload: RenderRequest):
 
 @app.get("/api/artifacts/{job_id}/{filename}")
 def artifact(job_id: str, filename: str):
-    if filename not in ("score.musicxml", "score.mid", "report.json", "preview.wav", "lyrics.txt", "choir.musicxml", "choir.mid", "orchestra.musicxml", "orchestra.mid", "quartet.musicxml", "quartet.mid", "neural_song.wav", "neural_song.mp3"):
+    if filename not in ("score.musicxml", "score.mid", "report.json", "preview.mp3", "lyrics.txt", "choir.musicxml", "choir.mid", "orchestra.musicxml", "orchestra.mid", "quartet.musicxml", "quartet.mid", "neural_song.mp3"):
         raise HTTPException(404, "Unsupported artifact")
     path = _jobdir(job_id) / filename
     if not path.is_file():
