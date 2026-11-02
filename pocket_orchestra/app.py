@@ -16,6 +16,7 @@ from .quality import inspect
 from .harmony import optimize_satb
 from .ollama import generate_plan
 from .control import router as control_router
+from .monitor import collect_metrics
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUTS = Path(os.environ.get("POCKET_ORCHESTRA_OUTPUT", str(ROOT / "outputs"))).resolve()
@@ -37,6 +38,12 @@ class RenderRequest(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 def home():
     return (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+
+
+@app.get("/api/metrics")
+def metrics():
+    """Live read-only CORE hardware status, polled every ~3 seconds by VPN UI."""
+    return collect_metrics()
 
 
 @app.get("/api/health")
