@@ -70,6 +70,17 @@ sudo loginctl enable-linger "$USER"
 
 В интерфейсе доступны «Только инструменты», «Только вокальный SATB» и «Инструменты + SATB». Вокальный SATB в v0.1 — только нотные партии на `Ahh/Ooh/Mmm`, **не исполнение русских слов**. См. [TEST_MODES.md](TEST_MODES.md).
 
+## Если установлен отдельный ACE-Step 1.5
+
+Он управляется **отдельно** и не выключается кнопкой остановки основной веб-службы:
+
+```bash
+bash /1tbdisk/muzikfed/scripts/start-ace-step.sh
+bash /1tbdisk/muzikfed/scripts/stop-ace-step.sh
+```
+
+ACE-Step устанавливается **только по желанию**, подробности: [ACE_STEP_SETUP.md](ACE_STEP_SETUP.md).
+
 ## Если что-то не включается
 
 ```bash
