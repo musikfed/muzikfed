@@ -27,21 +27,27 @@ bash scripts/update-core.sh
 bash scripts/check-core.sh
 ```
 
-## Управление службой: кнопка Stop + скрипты Start/Stop
+## Управление Pocket Orchestra — просто включить / выключить
 
-На веб-пульте появился раздел **«Управление CORE .100»** с подтверждаемой кнопкой остановки сервиса. Для защиты используется отдельный локальный код управления, создаваемый при обновлении; токен **не хранится в GitHub** и не показывается посетителям страницы.
+**Никаких кодов или токенов.** В веб-пульте на **http://192.168.0.100:9095** нажми кнопку **«■ Выключить Pocket Orchestra»** и подтверди. Выключается только сервис и его автозапуск. VPN, SSH, Ubuntu и сохранённые композиции остаются.
+
+Включить обратно можно через SSH (сам выключенный веб-пульт не принимает команды):
+
+```bash
+ssh user@192.168.0.100
+bash /1tbdisk/muzikfed/scripts/start-core.sh
+```
+
+Другие простые команды:
 
 ```bash
 cd /1tbdisk/muzikfed
-bash scripts/update-core.sh         # один раз установить новую версию и код управления
-bash scripts/show-control-token.sh  # показать секретный код в своём SSH-терминале
-bash scripts/start-core.sh          # запустить + включить автозапуск
-bash scripts/stop-core.sh           # остановить + отключить автозапуск
-bash scripts/restart-core.sh        # перезапустить
-bash scripts/status-core.sh         # статус
+bash scripts/stop-core.sh
+bash scripts/restart-core.sh
+bash scripts/status-core.sh
 ```
 
-**После остановки веб-пульт не может включить сам себя** — используй `start-core.sh` по SSH. Скрипты управляют только `pocket-orchestra.service`, не выключают Ubuntu, WireGuard или Ollama. **[Подробная инструкция](docs/SERVICE_CONTROL.md)**.
+Для обновления: `bash scripts/update-core.sh`. Полная инструкция: **[SERVICE_CONTROL.md](docs/SERVICE_CONTROL.md)**. Порт 9095 оставляй доступным только в доверенной LAN/VPN: посетитель страницы также может нажать выключение.
 
 ## Как проверить все режимы
 
