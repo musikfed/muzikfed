@@ -35,6 +35,7 @@ class GenerateRequest(BaseModel):
 
 class RenderRequest(BaseModel):
     job_id: str
+    mode: str = 'original'
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -164,7 +165,7 @@ def vocal_engine_status():
 def vocal_engine_start(payload: RenderRequest):
     job = _jobdir(payload.job_id)
     try:
-        result = ace_step.start(job)
+        result = ace_step.start(job, mode=payload.mode)
     except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
         raise HTTPException(503, str(exc)[:250]) from exc
     return result
