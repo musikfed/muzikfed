@@ -151,7 +151,7 @@ def test_direct_neural_song_project_does_not_compose_fake_midi():
 
 def test_original_song_web_calls_direct_endpoint():
     page = TestClient(app).get("/").text
-    assert "'/api/audio/project':'/api/generate'" in page
+    assert "mode==='guided'?'/api/generate':'/api/audio/project'" in page
     assert "mode==='original'" in page
 
 
