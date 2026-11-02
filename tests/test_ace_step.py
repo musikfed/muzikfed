@@ -3,20 +3,50 @@ import io
 import json
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from pocket_orchestra.app import app
-from pocket_orchestra import ace_step
+from pocket_orchestra import ace_step, gpu_control
 
 client = TestClient(app)
 
 
-def test_optional_engine_status_unavailable(monkeypatch):
+@pytest.mark.parametrize("installed", [False, True])
+def test_optional_engine_status_unavailable(monkeypatch, installed):
+    """Test both CORE states without probing the runner's REAL systemd home.
+
+    A workstation with no ACE unit must be unavailable; CORE with a unit
+    installed but intentionally stopped must remain startable from the UI.
+    """
     monkeypatch.setattr(ace_step, "_request",
                         lambda path, **kwargs: (_ for _ in ()).throw(OSError("not running")))
+    monkeypatch.setattr(gpu_control, "state", lambda: {
+        "ace_installed": installed, "audio_job_active": False,
+        "score_job_active": False, "gpu_owner": "idle", "job_id": None,
+    })
     r = client.get("/api/vocal/status")
     assert r.status_code == 200
-    assert r.json()["available"] is False
+    state = r.json()
+    assert state["available"] is installed
+    assert state["running"] is False
+    assert state["ace_installed"] is installed
+    if installed:
+        assert "запускается по кнопке" in state["message"]
+
+
+def test_optional_engine_running_without_user_systemd_unit(monkeypatch):
+    """Live health also grants availability even if systemd is not detected."""
+    monkeypatch.setattr(ace_step, "_request",
+                        lambda path, **kwargs: {"data": {"status": "ok"}})
+    monkeypatch.setattr(gpu_control, "state", lambda: {
+        "ace_installed": False, "audio_job_active": False,
+        "score_job_active": False, "gpu_owner": "idle", "job_id": None,
+    })
+    result = client.get("/api/vocal/status")
+    assert result.status_code == 200
+    assert result.json()["available"] is True
+    assert result.json()["running"] is True
 
 
 def test_bridged_song_creates_local_mp3(tmp_path, monkeypatch):
