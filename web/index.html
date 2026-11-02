@@ -88,7 +88,7 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <div class="field"><label class="rangeLabel" for="humanize"><span>Микронеровности MIDI</span><output id="humanizeValue">25%</output></label><input type="range" id="humanize" min="0" max="100" value="25"><div class="hint">Ноты в MusicXML остаются точными. Только MIDI получает небольшие смещения начала нот.</div></div>
 <div class="grid2"><div class="field"><label for="seed">Seed — повторяемый результат</label><input id="seed" type="number" min="0" max="4294967295" value="42"></div><div class="field" id="modelField"><label for="model">Локальная модель Ollama</label><input id="model" value="qwen3:8b"></div></div>
 <div class="checkbox"><input type="checkbox" id="useOllama"><label for="useOllama">Подключить Ollama для вариантов гармонии и мелодии (необязательно)</label></div><p class="hint" id="llmHelp">LLM выключена: Python создаёт ноты сам. Для первого теста она не нужна.</p>
-<div class="checkbox"><input type="checkbox" id="render" checked><label for="render">Создать черновой WAV, если FluidSynth установлен</label></div>
+<div class="checkbox"><input type="checkbox" id="render" checked><label for="render">Создать MP3-предпрослушивание MIDI через FluidSynth + FFmpeg</label></div>
 <button id="go" class="primary">✦ Создать партитуру MIDI / MusicXML</button><button id="reroll" class="secondary" style="width:100%;margin-top:10px">↻ Новая вариация (другой seed)</button><button id="resetSettings" class="secondary" style="width:100%;margin-top:10px">Сбросить сохранённые настройки</button>
 <p class="hint" id="saveStatus">Настройки автоматически сохраняются в этом браузере при изменении.</p><p class="hint" id="working"></p></section>
 </div><div class="right">
@@ -154,7 +154,7 @@ const names={violin_1:'Скрипки I',violin_2:'Скрипки II',viola:'А�
 const vals=['tempo','climax','density','tension','expression','humanize','brass'];
 // UI groups existing score-engine ensembles, without pretending that the v0.1 choir sings Russian words.
 const creationModes={
-  instrumental:{ensembles:['orchestra','quartet','chiptune','synthwave'],first:'orchestra',help:'Только инструменты: 12-партийный оркестр или струнный квартет. MusicXML, MIDI, черновой WAV. Вокала нет.'},
+  instrumental:{ensembles:['orchestra','quartet','chiptune','synthwave'],first:'orchestra',help:'Только инструменты: оркестр, квартет, 8-bit Dendy или Synthwave. MusicXML, MIDI и MP3-предпрослушивание; вокала нет.'},
   vocal:{ensembles:['choir'],first:'choir',help:'Режим вокала: кнопка партитуры создаёт SATB-ноты, а кнопка AI-песни запускает ACE-Step и создаёт звучащий вокал по словам. Пока ACE-Step не установлена, голосового WAV нет. Черновой WAV ещё не поёт русский текст.'},
   combined:{ensembles:['orchestra_choir','quartet_choir'],first:'orchestra_choir',help:'Инструменты + нотный хор SATB: общий MusicXML/MIDI и отдельные партии хора/инструментов. Для нейропесни по-русски можно отдельно подключить ACE-Step; синхронизированных отдельных вокальных WAV-стемов пока нет.'}
 };
@@ -166,6 +166,29 @@ function selectCreationMode(){
   preview();
 }
 
+const promptRecipes={
+  orchestra:{mode:'instrumental',ensemble:'orchestra',style:'cinematic',tempo:92,title:'Восход над крепостью',
+    prompt:'Эпическая оригинальная симфоническая тема для сказочного приключения. Вступление: тихие виолончели и одинокая флейта, минор, ощущение загадки. Раздел A: ясная запоминающаяся мелодия скрипок из короткого мотива, затем диалог флейты и гобоя. Раздел B: контрастная мажорная надежда, развитие мотива через секвенции, независимый бас и контрапункт. Кульминация: полные струнные, валторны и трубы, forte без постоянного шума. Завершение: спокойная тихая кода, мотив возвращается с разрешением. Не цитировать известные темы.'},
+  dendy:{mode:'instrumental',ensemble:'chiptune',style:'chiptune',tempo:148,title:'Пиксельное приключение',
+    prompt:'Оригинальная энергичная музыка для платформенной игры 8-bit в духе Dendy/NES, не копировать узнаваемые темы. 4 независимые MIDI-партии: высокий квадратный pulse lead с коротким крючком, контрмелодия, быстрые арпеджио, упругий бас. Раздел A: весёлый мотив с прыжками и синкопой. A’: вариация и секвенция. Раздел B: неожиданное минорное приключение и противостояние, выразительное изменение баса. Финал: возвращение главной темы и яркая каденция. Чёткая ритмика, игровые восьмые, без вокала.'},
+  synthwave:{mode:'instrumental',ensemble:'synthwave',style:'synthwave',tempo:108,title:'Неоновая трасса',
+    prompt:'Оригинальная современная synthwave/retrowave композиция о ночном городе и дороге после дождя. Мягкий широкий аналоговый пэд, сильный синтезаторный бас на долях, бегущие арпеджио и певучая лид-мелодия. A: спокойная загадочная 4-тактовая тема. A’: постепенное нарастание, вариация синкопированного ритма. B: яркий контраст и гармоническое напряжение с новой контрмелодией. Кульминация — насыщенно, затем светлая кода. Чистая мелодия, развитие и осмысленный финал без вокала.'},
+  lyrical:{mode:'vocal',ensemble:'choir',style:'lyrical',tempo:82,title:'Письмо сквозь облака',
+    prompt:'Оригинальная русская лирическая песня в стиле романс, мягкое красивое меццо-сопрано, очень разборчивая русская дикция, естественные фразы и вдохи, без автотюн-эффекта. Интро: спокойный нисходящий мотив, прозрачная тихая атмосфера. Куплет — нежная распевная мелодия с развитием текста. Припев — выразительный подъём к высокой ноте, не крик. Второй куплет вариативный, финал с затухающим повтором темы. Чёткая эмоциональная форма и осмысленное разрешение.'}
+};
+$('usePromptPreset').addEventListener('click',()=>{
+  const p=promptRecipes[$('promptPreset').value];
+  if(!p)return;
+  $('creationMode').value=p.mode;
+  selectCreationMode();
+  $('ensemble').value=p.ensemble;
+  $('style').value=p.style;
+  $('tempo').value=p.tempo;
+  $('title').value=p.title;
+  $('prompt').value=p.prompt;
+  preview();
+  saveSettings();
+});
 function config(){return {title:$('title').value,prompt:$('prompt').value,ensemble:$('ensemble').value,key:$('key').value,mode:$('mode').value,tempo:+$('tempo').value,bars:+$('bars').value,density:+$('density').value/100,tension:+$('tension').value/100,expression:+$('expression').value/100,humanize:+$('humanize').value/100,brass_level:+$('brass').value/100,choir_entry:+$('choirEntry').value,climax:+$('climax').value/100,seed:+$('seed').value,choir_vowel:$('vowel').value,use_ollama:$('useOllama').checked,model:$('model').value,style:$('style').value,lyrics:$('lyrics').value,score_engine:$('scoreEngine').value,ai_duration:+$('aiDuration').value};}
 function renderTimeline(bars){const c=$('timeline');c.replaceChildren();for(let i=0;i<bars;i++){const el=document.createElement('div');el.className='bar '+['a','b','c','d'][Math.floor(i/4)%4];el.title='Такт '+(i+1)+' · '+['A','A′','B','A″'][Math.floor(i/4)%4];c.append(el)}}
 const ensembleDescriptions={
@@ -182,10 +205,10 @@ $('choirVowelField').classList.toggle('hide',!hasChoir);
 $('choirEntryField').classList.toggle('hide',!hasChoir);
 $('lyricsField').classList.toggle('hide',!hasChoir);
 $('brassField').classList.toggle('hide',!hasBrass);
-$('modelField').classList.toggle('hide',!c.use_ollama);
+$('modelField').classList.toggle('hide',!c.use_ollama&&c.score_engine!=='ai_polyphony');
 $('ensembleHelp').textContent=ensembleDescriptions[c.ensemble];
 $('aceGenerate').textContent=hasChoir?'🎤 Создать песню с русским вокалом по промпту':'🎻 Создать инструментальную AI-композицию';
-$('llmHelp').textContent=c.use_ollama?'Ollama должна работать на CORE: 127.0.0.1:11434, модель '+c.model+'. Ollama пишет музыкальный план и при необходимости новые русские слова. Если модель недоступна, появится ошибка, а не поддельный результат.':'Плановая LLM отключена. Выбор «ИИ-полифонист Qwen» выше отдельно запускает Qwen для нот. Для текста песни включи Ollama или создай AI-песню в ACE-Step.';
+$('llmHelp').textContent=c.use_ollama?'Ollama должна работать на CORE: 127.0.0.1:11434, модель '+c.model+'. Ollama пишет музыкальный план и при необходимости новые русские слова. Если модель недоступна, появится ошибка, а не поддельный результат.':c.score_engine==='ai_polyphony'?'Qwen через Ollama пишет гармонический план и ноты двух независимых голосов по полному промпту; затем освобождает RTX. Другие партии оркеструет Python.':'Нотный режим CPU не вызывает ИИ. Для качественного плана и двух нотных голосов выбери ИИ-полифониста Qwen. Для русского аудиовокала — ACE-Step.';
 for(const name of vals){$(name+'Value').textContent=name==='tempo'?c.tempo+' BPM':Math.round((name==='brass'?c.brass_level:c[name])*100)+'%'}$('duration').textContent=Math.round(c.bars*4*60/c.tempo)+' сек.';$('pieceTitle').textContent=c.title;$('pieceCaption').textContent=c.key+' '+c.mode+' · '+c.tempo+' BPM · '+c.bars+' тактов · '+{orchestra:'Оркестр',quartet:'Струнный квартет',quartet_choir:'Струнный квартет + SATB',choir:'Вокальный SATB',orchestra_choir:'Оркестр и SATB'}[c.ensemble];renderTimeline(c.bars)}
 for(const key of [...vals,'title','key','mode','bars','choirEntry','useOllama','model','style','lyrics','scoreEngine']) $(key).addEventListener('input',preview);
 $('ensemble').addEventListener('change',preview);
