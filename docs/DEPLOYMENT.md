@@ -16,6 +16,8 @@
 
 **Единственный путь репозитория:** `/1tbdisk/muzikfed`. В нём лежат исходники, `.venv/`, `.cache/uv/` и `outputs/`. Никаких исходников в домашнем каталоге `user` не создаём. Исключение — файл пользовательского systemd-сервиса `~/.config/systemd/user/pocket-orchestra.service`, требуемый systemd.
 
+**Разбор ошибки из лога:** `findmnt -T /1tbdisk` показал `/dev/nvme1n1p2` с `ext4` и `rw`; `git clone` завершился `Permission denied`, потому что обычный `user` не мог создать каталог внутри смонтированного диска. Для исправления достаточно создать папку `/1tbdisk/muzikfed` через `sudo install -d -o "$(id -un)" -g "$(id -gn)" -m 755 /1tbdisk/muzikfed`, затем запускать `git clone` **без sudo**. Если папка уже не пустая, сначала изучи содержимое: не удаляй и не перезаписывай данные.
+
 Перед клонированием проверь `findmnt -T /1tbdisk` и `ls -la /1tbdisk/muzikfed`: это должен быть твой 2 ТБ диск, а не корневой раздел Ubuntu. Не используй `sudo git clone` и не меняй права всего диска рекурсивно. Если папка уже существует и содержит чужие файлы, развертывание **остановится**, ничего не удаляя.
 
 ## 1. Первая загрузка проекта на CORE .100
@@ -35,6 +37,10 @@ sudo apt install -y git curl fluidsynth fluid-soundfont-gm
 # Проверить, что /1tbdisk действительно смонтирован на нужном диске.
 findmnt -T /1tbdisk
 ls -ld /1tbdisk
+# Если /1tbdisk/muzikfed не существует и git clone не может её создать:
+# исправить права только на директорию проекта, НЕ на весь /1tbdisk.
+sudo install -d -o "$(id -un)" -g "$(id -gn)" -m 755 /1tbdisk/muzikfed
+ls -ld /1tbdisk/muzikfed
 # Если /1tbdisk/muzikfed уже содержит Git-репозиторий — делай git pull,
 # если папка отсутствует или пуста — клонируй в этот точный путь.
 git clone https://github.com/musikfed/muzikfed.git /1tbdisk/muzikfed
