@@ -59,9 +59,18 @@ def start(job_dir: Path) -> dict:
     if style == "auto":
         style = report["composition"].get("planning", {}).get("resolved_style", "cinematic")
     solo = cfg.get("ensemble") == "choir"
-    context = ("Russian solo operatic singer, expressive aria, a cappella, no instruments"
+    vocal_styles = {
+        "opera": "dramatic operatic voice, expressive aria, sustained legato",
+        "march": "clear powerful ceremonial voice, strong march rhythm",
+        "lyrical": "warm intimate lyrical singer, expressive ballad",
+        "folk": "traditional Russian folk singing voice, acoustic warmth",
+        "ambient": "soft ethereal sung vocal, atmospheric phrasing",
+        "cinematic": "cinematic soaring expressive sung vocals",
+    }
+    vocal_character = vocal_styles.get(style, vocal_styles["cinematic"])
+    context = (f"Solo Russian-language singing, {vocal_character}, a cappella, no instruments"
                if solo else
-               "Russian expressive operatic lead vocal with symphonic orchestra, emotional cinematic arrangement")
+               f"Russian-language lead singing, {vocal_character}, symphonic orchestral accompaniment")
     description = f"{context}. Musical style: {style}. Subject: {cfg['prompt'][:700]}"
     seconds = max(10, min(600, round(cfg["bars"] * 4 * 60 / cfg["tempo"])))
     response = _request("/release_task", {
