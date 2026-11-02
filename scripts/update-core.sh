@@ -11,5 +11,13 @@ if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
   echo 'ERROR: local changes detected; commit/stash them before updating.' >&2
   exit 1
 fi
+echo "== Pocket Orchestra: downloading latest main from GitHub =="
 git pull --ff-only origin main
+echo "== Installing dependencies, running checks and restarting user service =="
 bash scripts/install-core.sh
+echo "== Current installed git revision =="
+git log -1 --oneline
+echo "== Pocket Orchestra service =="
+systemctl --user is-active pocket-orchestra.service || true
+echo "== Web dashboard: http://192.168.0.100:9095 =="
+
