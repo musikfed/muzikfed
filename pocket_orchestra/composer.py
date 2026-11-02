@@ -32,6 +32,7 @@ class Config:
     model: str = "qwen3:8b"
     style: str = "auto"
     lyrics: str = ""
+    score_engine: str = "rules"  # rules or ai_polyphony (Ollama writes notes)
 
     def __post_init__(self):
         if not (1 <= len(self.title) <= 100 and len(self.prompt) <= 4000):
@@ -53,6 +54,8 @@ class Config:
             raise ValueError("seed вне диапазона")
         if self.style not in ("auto", "cinematic", "march", "lyrical", "folk", "opera", "ambient"):
             raise ValueError("Неизвестный музыкальный стиль")
+        if self.score_engine not in ("rules", "ai_polyphony"):
+            raise ValueError("Неизвестный движок партитуры")
         if len(self.lyrics) > 4000:
             raise ValueError("Максимальная длина текста песни — 4000 символов")
         if not (1 <= len(self.model) <= 80):
