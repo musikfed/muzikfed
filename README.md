@@ -27,6 +27,22 @@ bash scripts/update-core.sh
 bash scripts/check-core.sh
 ```
 
+## Управление службой: кнопка Stop + скрипты Start/Stop
+
+На веб-пульте появился раздел **«Управление CORE .100»** с подтверждаемой кнопкой остановки сервиса. Для защиты используется отдельный локальный код управления, создаваемый при обновлении; токен **не хранится в GitHub** и не показывается посетителям страницы.
+
+```bash
+cd /1tbdisk/muzikfed
+bash scripts/update-core.sh         # один раз установить новую версию и код управления
+bash scripts/show-control-token.sh  # показать секретный код в своём SSH-терминале
+bash scripts/start-core.sh          # запустить + включить автозапуск
+bash scripts/stop-core.sh           # остановить + отключить автозапуск
+bash scripts/restart-core.sh        # перезапустить
+bash scripts/status-core.sh         # статус
+```
+
+**После остановки веб-пульт не может включить сам себя** — используй `start-core.sh` по SSH. Скрипты управляют только `pocket-orchestra.service`, не выключают Ubuntu, WireGuard или Ollama. **[Подробная инструкция](docs/SERVICE_CONTROL.md)**.
+
 ## Как проверить все режимы
 
 **[Пошаговая проверка оркестра, квартета, SATB и объединённых составов](docs/TEST_MODES.md)** — через браузер и автоматически.
