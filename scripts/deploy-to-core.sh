@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run from Acer WSL/Git Bash or another Linux machine:
-#   bash scripts/deploy-to-core.sh user@CORE_WIREGUARD_IP
+#   bash scripts/deploy-to-core.sh user@192.168.0.100
 # Deploys exclusively through SSH; no password, key, cert or VPN config is uploaded to GitHub.
 set -Eeuo pipefail
 if [[ $# -ne 1 || -z "$1" || "$1" == -* ]]; then
@@ -32,4 +32,12 @@ else
 fi
 cd "$DEST"
 bash scripts/install-core.sh
+printf '\nDeployed commit: '
+git rev-parse --short HEAD
+echo 'Dashboard over LAN/WireGuard: http://192.168.0.100:9095'
+if command -v curl >/dev/null; then
+  if ! curl -fsS --max-time 5 http://192.168.0.100:9095/api/health; then
+    echo 'WARNING: web service is not reachable yet; inspect systemctl --user status pocket-orchestra and journalctl --user -u pocket-orchestra.' >&2
+  fi
+fi
 REMOTE
