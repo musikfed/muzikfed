@@ -15,6 +15,7 @@ from .export import write_midi, write_musicxml
 from .quality import inspect
 from .harmony import optimize_satb
 from .ollama import generate_plan
+from .lyrics import draft_lyrics, annotate_score_lyrics
 from .control import router as control_router
 from .monitor import collect_metrics
 
@@ -98,11 +99,19 @@ def generate(payload: GenerateRequest):
     piece = compose(cfg, plan)
     voice_result = optimize_satb(piece)
     piece.planning["satb_optimization"] = voice_result
+    lyrics_text = None
+    if "soprano" in piece.tracks:
+        lyrics_text = draft_lyrics(cfg)
+        piece.planning["lyrics_on_soprano_notes"] = annotate_score_lyrics(piece, lyrics_text)
+        piece.planning["lyric_mode"] = "user" if cfg.lyrics.strip() else "template_draft"
+        piece.planning["sung_audio_available"] = False
     report = inspect(piece)
     job_id = str(uuid.uuid4())
     out = OUTPUTS / job_id
     out.mkdir(parents=True)
     try:
+        if lyrics_text is not None:
+            (out / "lyrics.txt").write_text(lyrics_text + "\n", encoding="utf-8")
         write_musicxml(piece, out / "score.musicxml")
         write_midi(piece, out / "score.mid")
         if set(("soprano", "alto", "tenor", "choral_bass")).issubset(piece.tracks):
@@ -117,6 +126,7 @@ def generate(payload: GenerateRequest):
                 write_musicxml(accompaniment, out / f"{basename}.musicxml")
                 write_midi(accompaniment, out / f"{basename}.mid")
         manifest = {"composition": piece.summary(), "quality": report, "llm": llm_message,
+                    "lyrics_note": "Русский текст записан в lyrics.txt и нотах, но FluidSynth не поёт слова",
                     "renderer": "Final audio should be exported from MuseScore Studio + MuseSounds on .103"}
         (out / "report.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         render_message = _render(out) if payload.render_preview else "Черновой WAV не запрошен"
@@ -126,12 +136,13 @@ def generate(payload: GenerateRequest):
     urls = {"musicxml": f"/api/artifacts/{job_id}/score.musicxml",
             "midi": f"/api/artifacts/{job_id}/score.mid",
             "report": f"/api/artifacts/{job_id}/report.json"}
-    for name in ("choir.musicxml", "choir.mid", "orchestra.musicxml", "orchestra.mid", "quartet.musicxml", "quartet.mid"):
+    for name in ("lyrics.txt", "choir.musicxml", "choir.mid", "orchestra.musicxml", "orchestra.mid", "quartet.musicxml", "quartet.mid"):
         if (out / name).is_file():
             urls[name] = f"/api/artifacts/{job_id}/{name}"
     if (out / "preview.wav").is_file():
         urls["wav"] = f"/api/artifacts/{job_id}/preview.wav"
     return {"job_id": job_id, "urls": urls, "quality": report, "llm": llm_message,
+            "lyrics": lyrics_text, "lyrics_sung": False,
             "render": render_message, "composition": piece.summary()}
 
 
@@ -144,7 +155,7 @@ def render_job(payload: RenderRequest):
 
 @app.get("/api/artifacts/{job_id}/{filename}")
 def artifact(job_id: str, filename: str):
-    if filename not in ("score.musicxml", "score.mid", "report.json", "preview.wav", "choir.musicxml", "choir.mid", "orchestra.musicxml", "orchestra.mid", "quartet.musicxml", "quartet.mid"):
+    if filename not in ("score.musicxml", "score.mid", "report.json", "preview.wav", "lyrics.txt", "choir.musicxml", "choir.mid", "orchestra.musicxml", "orchestra.mid", "quartet.musicxml", "quartet.mid"):
         raise HTTPException(404, "Unsupported artifact")
     path = _jobdir(job_id) / filename
     if not path.is_file():
