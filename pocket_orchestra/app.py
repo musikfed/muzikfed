@@ -14,7 +14,7 @@ from .composer import Config, compose, Piece
 from .export import write_midi, write_musicxml
 from .quality import inspect
 from .harmony import optimize_satb
-from .ollama import generate_plan
+from .ollama import generate_plan, generate_lyrics
 from .lyrics import draft_lyrics, annotate_score_lyrics
 from .control import router as control_router
 from .monitor import collect_metrics
@@ -102,8 +102,16 @@ def generate(payload: GenerateRequest):
     lyrics_text = None
     if "soprano" in piece.tracks:
         lyrics_text = draft_lyrics(cfg)
+        lyric_mode = "user" if cfg.lyrics.strip() else "template_draft"
+        if cfg.use_ollama and not cfg.lyrics.strip():
+            try:
+                lyrics_text = generate_lyrics(cfg)
+                lyric_mode = f"ollama:{cfg.model}"
+                llm_message += "; русский текст написан LLM"
+            except (RuntimeError, ValueError) as exc:
+                llm_message += f"; текст по шаблону (Ollama не ответила: {str(exc)[:100]})"
         piece.planning["lyrics_on_soprano_notes"] = annotate_score_lyrics(piece, lyrics_text)
-        piece.planning["lyric_mode"] = "user" if cfg.lyrics.strip() else "template_draft"
+        piece.planning["lyric_mode"] = lyric_mode
         piece.planning["sung_audio_available"] = False
     report = inspect(piece)
     job_id = str(uuid.uuid4())
