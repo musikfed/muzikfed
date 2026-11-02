@@ -15,6 +15,8 @@ STYLES = {
     "folk": "Russian folk melodic character, acoustic instruments, expressive vocal phrasing",
     "ambient": "ambient cinematic textures, minimal pulse, evolving dynamics",
     "cinematic": "cinematic symphonic score, rich orchestration, contrasting sections",
+    "chiptune": "8-bit retro game chiptune, memorable square pulse lead, arpeggio, synthetic bass, cheerful Nintendo-era game soundtrack feel, original melody",
+    "synthwave": "modern synthwave and retro-electronic score, driving synth bass, warm analog pad, rich lead, shimmering arpeggios",
 }
 
 
@@ -43,7 +45,7 @@ def build_payload(job_dir: Path, mode: str = "original") -> tuple[dict, str]:
     caption = f"{character}. {mode_description}. Title: {title}. Full user request: {topic}"
     score_seconds = round(int(cfg["bars"]) * 4 * 60 / int(cfg["tempo"]))
     requested = int(cfg.get("ai_duration", 0))
-    if requested not in (0, 60, 120, 180, 300, 480, 600):
+    if requested not in (0, 20, 60, 120, 180, 300, 480, 600):
         raise ValueError("Неверная длительность AI-аудио")
     seconds = requested if requested else max(10, min(600, score_seconds))
     # RTX 3060 12GB: official 8–12 GB tier supports up to 480s with 0.6B
