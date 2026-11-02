@@ -97,21 +97,20 @@ systemctl --user enable --now pocket-orchestra
 
 `install-core.sh` не перезаписывает личные сертификаты, WireGuard-настройки и пользовательские файлы. Установка допустима только из `/1tbdisk/muzikfed`, а все зависимости и результаты располагаются там же. Существующие файлы внутри `outputs/` остаются локальными и игнорируются Git.
 
-## Управление запущенным проектом
+## Управление запущенным проектом: без кодов
 
-Сервис уже установлен. Теперь есть веб-кнопка «Остановить Pocket Orchestra и службу» с локальным кодом подтверждения. Код создаётся при первом обновлении и хранится только в `/1tbdisk/muzikfed/.cache/admin-token`, не в GitHub.
+Кнопка **«■ Выключить Pocket Orchestra»** в веб-пульте отключает только `pocket-orchestra.service` и его автозапуск. Нажми и подтверди — больше ничего вводить не надо. Сама Ubuntu и VPN остаются работать.
 
 ```bash
 cd /1tbdisk/muzikfed
-bash scripts/update-core.sh
-bash scripts/show-control-token.sh  # НЕ пересылай код никому
-bash scripts/status-core.sh
-bash scripts/stop-core.sh
-bash scripts/start-core.sh
-bash scripts/restart-core.sh
+bash scripts/update-core.sh   # обновить проект; служба запустится
+bash scripts/stop-core.sh     # выключить службу и автозапуск
+bash scripts/start-core.sh    # включить службу и автозапуск
+bash scripts/restart-core.sh  # перезапуск
+bash scripts/status-core.sh   # проверить состояние
 ```
 
-`stop-core.sh` выполняет `disable --now` **только для user-unit pocket-orchestra.service**, а `start-core.sh` выполняет `enable --now`. Через кнопку в браузере остановка планируется с задержкой 3 сек, чтобы ответ успел вернуться. **После отключения нельзя включить веб-службу из выключенной страницы** — используй SSH. Подробнее: **[SERVICE_CONTROL.md](SERVICE_CONTROL.md)**.
+Выключенная веб-служба не может включить себя по HTTP. Для запуска после выключения выполняй `bash /1tbdisk/muzikfed/scripts/start-core.sh` по SSH. Не нужно дополнительных секретов, токенов или фонового контроллера. Подробности: **[SERVICE_CONTROL.md](SERVICE_CONTROL.md)**.
 
 ## 2. Развёртывание на CORE одной командой с Acer
 
