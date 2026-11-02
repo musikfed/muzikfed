@@ -5,6 +5,14 @@
 Это **рабочий прототип**, а не готовый профессиональный симфонический композитор.
 Его сильная сторона — редактируемые ноты, музыкальная форма, раздельные партии и воспроизводимость по seed. Финальное качество **обязательно проверяется на слух**.
 
+## Состояние CORE .100 — подтверждено терминальным логом 02.11.2026
+
+- **Установлено и запущено:** исходники в `/1tbdisk/muzikfed`, Python 3.12.3, `.venv`, пользовательский `pocket-orchestra.service`, FastAPI/Uvicorn.
+- **Проверки:** `44 passed, 1 warning` — предупреждение `StarletteDeprecationWarning` о тестовом клиенте, не ошибка приложения.
+- **HTTP API:** `http://192.168.0.100:9095/api/health` возвращает `"status":"ok"`, `"renderer":true` и путь к `FluidR3_GM.sf2`. Это подтверждает доступность FluidSynth/SF2, **но не качество музыкального рендера**.
+- **Ещё не проверено из Acer:** доступ к странице через VPN, генерация произведения через веб-пульт, воспроизведение WAV и MuseSounds на GRAPHICS .103.
+- **Не нужно повторять `git clone`: проект уже установлен.** Новые коммиты ставятся через `bash scripts/update-core.sh`.
+
 ## Возможности 0.1
 
 - 12-партийный оркестр, 4-партийный струнный квартет, SATB-вокальный квартет, струнный квартет + SATB (8 партий), оркестр + хор (16 партий).
@@ -22,34 +30,22 @@
 - **GRAPHICS .103**, Windows 11 + RX 7600 XT: MuseScore Studio 4 + MuseSounds Core; качественная озвучка и экспорт.
 - **Acer Swift 3**, Windows 11: браузер, RDP/SSH через WireGuard, задания и прослушивание.
 
-### Запуск на Ubuntu CORE 192.168.0.100
+### Запуск и обновление на Ubuntu CORE 192.168.0.100
 
-**Единственная рабочая папка на CORE: `/1tbdisk/muzikfed` на 2 ТБ диске.** Исходники, `.venv`, кэш uv и все результаты `outputs/` остаются внутри неё. Старый путь в `~/pocket-orchestra` больше не используется. Служебный systemd user-unit находится в `~/.config/systemd/user` (это стандартное место для юнитов).
+**Основная папка — `/1tbdisk/muzikfed` на отдельном диске.** Исходники, виртуальное окружение, кэш uv и все результаты `outputs/` остаются в этой папке. Пользовательский systemd-unit находится в `~/.config/systemd/user/` по требованиям systemd.
 
-На CORE диск уже проверен как `/dev/nvme1n1p2` (ext4). Если `git clone` выдаёт `Permission denied`, а `/1tbdisk/muzikfed` ещё не существует, один раз создай папку от имени обычного пользователя через `sudo install -d -o "$(id -un)" -g "$(id -gn)" -m 755 /1tbdisk/muzikfed`. Не меняй права всего диска.
-
-До установки проверь, что `/1tbdisk` действительно находится на нужном диске (`findmnt -T /1tbdisk`). Если `/1tbdisk/muzikfed` уже содержит файлы, сначала выясни, является ли она Git-репозиторием: **ничего не удаляй и не перезаписывай**. Развёртывание через `scripts/deploy-to-core.sh` обрабатывает пустую папку и существующий репозиторий, но останавливается при посторонних файлах.
-
-
-Панель работает по твоей существующей LAN/VPN **на http://192.168.0.100:9095**. Дополнительный SSH-туннель не требуется.
-
-На сервере Ubuntu 24.04 в SSH-сессии обычного пользователя:
+**Проект уже клонирован и сервис запущен.** Для диагностики и обновления на Ubuntu CORE:
 
 ```bash
-sudo apt update
-sudo apt install -y git curl fluidsynth fluid-soundfont-gm
-# Один раз: создать только папку проекта с правами текущего пользователя.
-sudo install -d -o "$(id -un)" -g "$(id -gn)" -m 755 /1tbdisk/muzikfed
-git clone https://github.com/musikfed/muzikfed.git /1tbdisk/muzikfed
 cd /1tbdisk/muzikfed
-bash scripts/install-core.sh
-systemctl --user status pocket-orchestra --no-pager
-curl -fsS http://192.168.0.100:9095/api/health
+bash scripts/check-core.sh
+# После публикации новых коммитов на GitHub:
+bash scripts/update-core.sh
 ```
 
-На Acer открой **http://192.168.0.100:9095** через настроенный WireGuard/VPN. CORE должен действительно иметь адрес `192.168.0.100` на интерфейсе (`ip -4 addr show`). Не пробрасывай 9095 на внешний IP: у прототипа пока нет авторизации.
+Веб-мордочка: **http://192.168.0.100:9095**. Если VPN маршрутизирует адрес CORE, Acer открывает её напрямую без SSH-туннеля. Прототип не имеет авторизации: **не публикуй порт 9095 в интернете**.
 
-Вся последовательность первой установки, обновления и диагностики: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**. Как коммитить и отправлять файлы обратно в GitHub: **[docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)**.
+Первая установка на чистом диске, устранение `Permission denied`, работа с systemd, диагностика после обновления: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**. Как отправлять изменения через `git push`: **[docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)**.
 
 ### Локальный ИИ на CORE .100 (необязательно)
 
@@ -113,42 +109,30 @@ uv run pocket-orchestra
 
 Исходный код этой папки: MIT, см. `LICENSE`. MuseSounds, SoundFont и SFZ-библиотеки поставляются **отдельно** и имеют **собственные лицензии**, не включены в репозиторий.
 
-## Как отправлять код на сервер и в GitHub
+## Как обновлять сервер и отправлять изменения на GitHub
 
-Подробная инструкция: **[развёртывание CORE .100](docs/DEPLOYMENT.md)** и **[GitHub: clone / pull / commit / push](docs/GIT_WORKFLOW.md)**.
-
-**Первые загрузка и установка** на Ubuntu .100:
-
-```bash
-git clone https://github.com/musikfed/muzikfed.git /1tbdisk/muzikfed
-cd /1tbdisk/muzikfed
-bash scripts/install-core.sh
-```
-
-**Обновить сервер** после нового коммита в GitHub:
+**GitHub → CORE** (после коммитов, без повторного клонирования):
 
 ```bash
 cd /1tbdisk/muzikfed
 bash scripts/update-core.sh
+bash scripts/check-core.sh
 ```
 
-**Обновить сервер с Acer** (WSL/Git Bash, через доступный VPN/SSH):
+**CORE → GitHub** (только если самостоятельно менял исходники):
 
 ```bash
-bash scripts/deploy-to-core.sh user@192.168.0.100
-```
-
-**Загрузить свои правки в GitHub** из каталога клонированного репозитория:
-
-```bash
+cd /1tbdisk/muzikfed
 git status
-git add README.md docs/DEPLOYMENT.md
+git add README.md
+git diff --cached --check
 git diff --cached
-git commit -m "docs: improve instructions"
+git commit -m "docs: update README"
+git pull --rebase origin main
 git push origin main
 ```
 
-В `git add` указывай фактически изменённые файлы; для push нужна настроенная GitHub-авторизация. Не отправляй сертификаты, ключи, `.env` и `outputs/` в публичный репозиторий. Проверяй изменения перед коммитом.
+Вместо `README.md` выбирай реально изменённые файлы. Для `git push` настрой авторизацию GitHub. Перед коммитом **проверяй**, что в него не попадают сертификаты, `.env` или приватные ключи. Полные инструкции: [DEPLOYMENT.md](docs/DEPLOYMENT.md) и [GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md).
 
 ### Что пока нельзя обещать
 
