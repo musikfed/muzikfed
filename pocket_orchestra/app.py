@@ -270,17 +270,43 @@ def _watch_audio_job(job_id: str) -> None:
     except (OSError, ValueError, KeyError, TypeError):
         duration = 300
     deadline = time.monotonic() + max(1800, min(10200, duration * 12))
-    while time.monotonic() < deadline:
-        time.sleep(6)
-        try:
-            state = ace_step.poll(_jobdir(job_id))
-        except (OSError, RuntimeError, ValueError, KeyError, TypeError, json.JSONDecodeError):
-            continue
-        if state.get("state") in ("complete", "failed"):
-            gpu_control.release_audio(job_id)
-            return
-    gpu_control.release_audio(job_id)
+    failures = 0
+    job = _jobdir(job_id)
+    def save_failure(message: str) -> None:
+        target = job / "neural_error.json"
+        target.write_text(
+            json.dumps({"message": message[:400]}, ensure_ascii=False),
+            encoding="utf-8",
+        )
 
+    try:
+        while time.monotonic() < deadline:
+            time.sleep(6)
+            try:
+                state = ace_step.poll(job)
+                failures = 0
+            except (OSError, RuntimeError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+                failures += 1
+                if failures >= 5:
+                    save_failure("Не удалось получить готовый MP3: "
+                                 + str(exc)[:240]
+                                 + ". Проверь journalctl --user -u pocket-orchestra-ace.service -n 60")
+                    return
+                continue
+            if state.get("state") == "failed":
+                save_failure(state.get("message", "ACE-Step сообщила об ошибке"))
+                return
+            if state.get("state") == "complete":
+                return
+        save_failure("Превышено время генерации MP3. Проверь журнал ACE-Step.")
+    except Exception as exc:
+        # Keep a usable error instead of a hanging web UI if the watcher dies.
+        try:
+            save_failure("Ошибка сохранения результата: " + str(exc)[:240])
+        except OSError:
+            pass
+    finally:
+        gpu_control.release_audio(job_id)
 
 @app.post("/api/vocal/start")
 def vocal_engine_start(payload: RenderRequest):
