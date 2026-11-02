@@ -22,3 +22,6 @@ id_ed25519
 # Disk-local uv cache and generated project lock (until dependency versions are pinned)
 .cache/
 /uv.lock
+
+# Optional separately installed ACE-Step model and Python dependencies
+/engines/
