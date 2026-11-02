@@ -43,9 +43,9 @@ class Config:
         if self.key not in TONICS or self.mode not in SCALES:
             raise ValueError("Неизвестная тональность/лад")
         if not (45 <= self.tempo <= 190) or not (
-            type(self.bars) is int and 8 <= self.bars <= 256 and self.bars % 4 == 0
+            type(self.bars) is int and 8 <= self.bars <= 512 and self.bars % 4 == 0
         ):
-            raise ValueError("Темп 45–190, тактов: кратно 4 от 8 до 256")
+            raise ValueError("Темп 45–190, тактов: кратно 4 от 8 до 512")
         if type(self.ai_duration) is not int or self.ai_duration not in (0, 60, 120, 180, 300, 480, 600):
             raise ValueError("Длительность AI: по партитуре, 1, 2, 3, 5, 8 или 10 минут")
         for name in ("density", "tension", "expression", "humanize", "brass_level", "climax"):
