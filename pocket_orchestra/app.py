@@ -85,6 +85,36 @@ def _render(path: Path) -> str:
     return "Черновой WAV создан с помощью FluidSynth; не путать с финальным MuseSounds"
 
 
+@app.post("/api/audio/project")
+def new_audio_project(payload: GenerateRequest):
+    """One-click ACE-Step-only project: full prompt, no fake/random MIDI composition."""
+    try:
+        cfg = Config.from_dict(payload.config)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+    job_id = str(uuid.uuid4())
+    job = OUTPUTS / job_id
+    job.mkdir(parents=True)
+    try:
+        from .composer import _style
+        report = {
+            "composition": {"config": asdict(cfg), "planning": {
+                "resolved_style": _style(cfg), "source": "audio_prompt_only"}},
+            "engine": "ACE-Step 1.5 / neural original text-to-music",
+            "source_midi": None,
+        }
+        (job / "report.json").write_text(
+            json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        if cfg.lyrics.strip() and "choir" in cfg.ensemble:
+            (job / "lyrics.txt").write_text(cfg.lyrics.strip() + "\n", encoding="utf-8")
+    except Exception:
+        shutil.rmtree(job, ignore_errors=True)
+        raise
+    return {"job_id": job_id, "engine": "ace-step", "mode": "original",
+            "note": "Словесный промпт передан нейросети напрямую, MIDI не создавался."}
+
+
 @app.post("/api/generate")
 def generate(payload: GenerateRequest):
     try:
