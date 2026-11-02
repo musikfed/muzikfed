@@ -13,6 +13,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from .hybrid import build_payload
+
 URL = "http://127.0.0.1:8001"
 MAX_DOWNLOAD = 120 * 1024 * 1024
 RESULT_NAME = "neural_song.wav"
@@ -42,48 +44,29 @@ def status() -> dict:
         return {"available": False, "message": "ACE-Step на CORE не запущен; требуется отдельная установка."}
 
 
-def start(job_dir: Path) -> dict:
-    """Submit a song generated from the existing notation job and its lyrics."""
-    report = json.loads((job_dir / "report.json").read_text(encoding="utf-8"))
-    cfg = report["composition"]["config"]
-    lyric_file = job_dir / "lyrics.txt"
-    if not lyric_file.is_file():
-        raise ValueError("Для нейропения сначала создай нотный хоровой проект с текстом")
-    lyrics = lyric_file.read_text(encoding="utf-8").strip()
-    if not lyrics:
-        raise ValueError("Пустой текст песни")
-    if (job_dir / "neural_task.json").exists():
-        raise ValueError("Нейрозадача для этого произведения уже запущена")
+def start(job_dir: Path, mode: str = "original") -> dict:
+    """Submit original neural music or a score-guided 'cover' of MIDI-rendered WAV.
 
-    style = cfg.get("style", "auto")
-    if style == "auto":
-        style = report["composition"].get("planning", {}).get("resolved_style", "cinematic")
-    solo = cfg.get("ensemble") == "choir"
-    vocal_styles = {
-        "opera": "dramatic operatic voice, expressive aria, sustained legato",
-        "march": "clear powerful ceremonial voice, strong march rhythm",
-        "lyrical": "warm intimate lyrical singer, expressive ballad",
-        "folk": "traditional Russian folk singing voice, acoustic warmth",
-        "ambient": "soft ethereal sung vocal, atmospheric phrasing",
-        "cinematic": "cinematic soaring expressive sung vocals",
-    }
-    vocal_character = vocal_styles.get(style, vocal_styles["cinematic"])
-    context = (f"Solo Russian-language singing, {vocal_character}, a cappella, no instruments"
-               if solo else
-               f"Russian-language lead singing, {vocal_character}, symphonic orchestral accompaniment")
-    description = f"{context}. Musical style: {style}. Subject: {cfg['prompt'][:700]}"
-    seconds = max(10, min(600, round(cfg["bars"] * 4 * 60 / cfg["tempo"])))
-    response = _request("/release_task", {
-        "prompt": description, "lyrics": lyrics,
-        "vocal_language": "ru", "audio_format": "wav",
-        "audio_duration": seconds, "thinking": True,
-    }, timeout=30)
+    No fake lyrics or hidden replacement scores; explicitly declare the mode.
+    """
+    if (job_dir / "neural_task.json").exists():
+        raise ValueError("Для этого произведения нейрозадача уже запускалась; сделай новую вариацию")
+    payload, note = build_payload(job_dir, mode)
+    response = _request("/release_task", payload, timeout=30)
     task = (response.get("data") or {}).get("task_id")
     if not isinstance(task, str) or not 8 <= len(task) <= 128:
         raise ValueError("ACE-Step не вернул task_id")
-    info = {"task_id": task, "audio_mode": "a_cappella_requested" if solo else "song_with_arrangement",
-            "note": "Нейрозвук самостоятельный: не совпадает точно с MIDI, изолированные WAV-стемы не гарантируются"}
-    (job_dir / "neural_task.json").write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
+    cfg = json.loads((job_dir / "report.json").read_text(encoding="utf-8"))["composition"]["config"]
+    solo = cfg.get("ensemble") == "choir"
+    info = {
+        "task_id": task, "generation_mode": mode,
+        "audio_mode": "a_cappella_requested" if solo else
+                      "instrumental" if "choir" not in cfg.get("ensemble", "") else "song_with_arrangement",
+        "note": note,
+    }
+    (job_dir / "neural_task.json").write_text(
+        json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     return {"state": "queued", **info}
 
 
