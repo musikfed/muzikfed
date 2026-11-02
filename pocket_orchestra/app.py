@@ -317,7 +317,7 @@ def vocal_engine_poll(job_id: str):
 def render_job(payload: RenderRequest):
     path = _jobdir(payload.job_id)
     result = _render(path)
-    return {"message": result, "wav_url": f"/api/artifacts/{payload.job_id}/preview.wav" if (path / "preview.wav").is_file() else None}
+    return {"message": result, "mp3_url": f"/api/artifacts/{payload.job_id}/preview.mp3" if (path / "preview.mp3").is_file() else None}
 
 
 @app.get("/api/artifacts/{job_id}/{filename}")
