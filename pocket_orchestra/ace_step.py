@@ -70,7 +70,7 @@ def start(job_dir: Path, mode: str = "original") -> dict:
     return {"state": "queued", **info}
 
 
-def poll(job_dir: Path) -> dict:
+def poll(job_dir: Path, *, download: bool = True) -> dict:
     """Read ACE-Step result and download one validated locally hosted WAV."""
     if (job_dir / RESULT_NAME).is_file():
         return {"state": "complete", "url_ready": True}
@@ -87,6 +87,9 @@ def poll(job_dir: Path) -> dict:
     if state == 2:
         return {"state": "failed", "message": "ACE-Step сообщил об ошибке генерации", "url_ready": False}
     if state != 1:
+        return {"state": "working", "url_ready": False}
+    if not download:
+        # API status checks only; the server-side watcher is the sole WAV downloader.
         return {"state": "working", "url_ready": False}
     result = row.get("result")
     if isinstance(result, str):
