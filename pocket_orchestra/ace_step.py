@@ -14,11 +14,10 @@ import urllib.parse
 import urllib.request
 
 from .hybrid import build_payload
-from .audio_export import create_mp3
 
 URL = "http://127.0.0.1:8001"
-MAX_DOWNLOAD = 256 * 1024 * 1024  # 10min PCM WAV at 48 kHz/stereo; stream to disk
-RESULT_NAME = "neural_song.wav"
+MAX_DOWNLOAD = 64 * 1024 * 1024  # MP3 up to 10min; keep strict cap
+RESULT_NAME = "neural_song.mp3"
 
 
 def _request(path: str, payload: dict | None = None, timeout: float = 10) -> dict:
@@ -72,7 +71,7 @@ def start(job_dir: Path, mode: str = "original") -> dict:
 
 
 def poll(job_dir: Path, *, download: bool = True) -> dict:
-    """Read ACE-Step result and download one validated locally hosted WAV."""
+    """Read ACE-Step result and download one validated locally hosted MP3."""
     if (job_dir / RESULT_NAME).is_file():
         return {"state": "complete", "url_ready": True}
     task_path = job_dir / "neural_task.json"
@@ -109,24 +108,28 @@ def poll(job_dir: Path, *, download: bool = True) -> dict:
     request = urllib.request.Request(URL + audio_path)
     target = job_dir / RESULT_NAME
     temp = job_dir / "neural_song.pending"
-    mp3_target = job_dir / "neural_song.mp3"
-    # Don't materialize a 5–10 min uncompressed WAV in RAM. Download on disk
-    # in bounded chunks; no externally supplied URL can escape ACE localhost.
+    # Download directly as MP3: no intermediate AI WAV, no ffmpeg requirement.
+    # Stream to disk instead of loading a long song into RAM.
     try:
         with urllib.request.urlopen(request, timeout=60) as stream, temp.open("wb") as sink:
-            header = stream.read(12)
-            if not (header.startswith(b"RIFF") and header[8:12] == b"WAVE"):
-                raise ValueError("ACE-Step вернул не WAV; проверь audio_format и конфигурацию модели")
+            header = stream.read(10)
+            if not (header.startswith(b"ID3") or (
+                len(header) >= 2 and header[0] == 0xFF and header[1] & 0xE0 == 0xE0
+            )):
+                raise ValueError("ACE-Step вернул не MP3; проверь audio_format модели")
             sink.write(header)
             size = len(header)
             while chunk := stream.read(1024 * 1024):
                 size += len(chunk)
                 if size > MAX_DOWNLOAD:
-                    raise ValueError("Слишком большой WAV от ACE-Step (макс. 256 МиБ)")
+                    raise ValueError("Слишком большой MP3 от ACE-Step (макс. 64 МиБ)")
                 sink.write(chunk)
-        # Best effort sharing copy; no codec loss in the original WAV.
-        create_mp3(temp, mp3_target)
         os.replace(temp, target)
+        # Temporary MIDI/FluidSynth guide is needed only during cover; remove
+        # it AFTER MP3 completed. Keep score.mid / MusicXML for editing.
+        task_data = json.loads(task_path.read_text(encoding="utf-8"))
+        if task_data.get("generation_mode") == "guided":
+            (job_dir / "preview.wav").unlink(missing_ok=True)
     finally:
         temp.unlink(missing_ok=True)
     # In description-only mode the real ACE-Step LM can write the lyrics.
