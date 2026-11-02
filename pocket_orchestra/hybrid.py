@@ -41,14 +41,28 @@ def build_payload(job_dir: Path, mode: str = "original") -> tuple[dict, str]:
                         else "Russian-language sung lead with symphonic orchestral accompaniment"
                         if is_voice else "Instrumental only, no vocals")
     caption = f"{character}. {mode_description}. Title: {title}. Full user request: {topic}"
-    seconds = max(10, min(600, round(int(cfg["bars"]) * 4 * 60 / int(cfg["tempo"]))))
+    score_seconds = round(int(cfg["bars"]) * 4 * 60 / int(cfg["tempo"]))
+    requested = int(cfg.get("ai_duration", 0))
+    if requested not in (0, 60, 120, 180, 300, 480, 600):
+        raise ValueError("Неверная длительность AI-аудио")
+    seconds = requested if requested else max(10, min(600, score_seconds))
+    # RTX 3060 12GB: official 8–12 GB tier supports up to 480s with 0.6B
+    # LM and up to 600s without LM. Never silently label a short clip 10m.
+    if seconds > 480 and is_voice and not lyrics:
+        raise ValueError("Для 10 минут русского вокала впиши готовый текст: 0.6B LM ограничена 8 минутами на RTX 3060.")
+    if mode == "guided" and requested and abs(score_seconds - seconds) > 15:
+        raise ValueError(
+            "Гибрид требует MIDI примерно той же длины, что AI-аудио "
+            f"(MIDI {score_seconds} сек, запрос {seconds} сек)."
+        )
     payload = {
         "prompt": caption, "lyrics": lyrics if is_voice else "[Instrumental]",
         "vocal_language": "ru" if is_voice else "en",
-        "audio_format": "wav", "audio_duration": seconds,
+        "audio_format": "mp3", "audio_duration": seconds,
         "bpm": int(cfg["tempo"]),
         "key_scale": f"{cfg.get('key', 'D')} {'minor' if cfg.get('mode', 'minor') == 'minor' else 'major'}",
-        "time_signature": "4", "thinking": True, "model": "acestep-v15-turbo",
+        "time_signature": "4", "thinking": seconds <= 480 and mode == "original",
+        "model": "acestep-v15-turbo",
         "use_random_seed": False, "seed": int(cfg.get("seed", 42)), "batch_size": 1,
     }
     if is_voice and not lyrics:
@@ -63,7 +77,7 @@ def build_payload(job_dir: Path, mode: str = "original") -> tuple[dict, str]:
         if not guide.is_file() or guide.stat().st_size < 44:
             raise ValueError("Для гибрида сначала создай опорный WAV из MIDI (галочка WAV).")
         payload.update(task_type="cover", src_audio_path=str(guide), audio_cover_strength=.65)
-        note = "Нотный WAV передан как источник cover; ACE-Step может менять мелодию и длительность."
+        note = f"Гибрид {seconds} сек: WAV из MIDI передан в cover, нейросеть может менять мелодию."
     else:
-        note = "Новая нейропесня по промпту; нотная партитура остаётся независимой."
+        note = f"AI-композиция {seconds} сек по промпту; ноты MIDI не обязательны."
     return payload, note

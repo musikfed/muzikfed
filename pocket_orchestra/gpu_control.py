@@ -40,7 +40,7 @@ def _active() -> dict | None:
         entry = json.loads(LEASE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    if time.time() - entry.get("created", 0) > 7200:
+    if time.time() - entry.get("created", 0) > 10800:
         LEASE.unlink(missing_ok=True)
         return None
     return entry

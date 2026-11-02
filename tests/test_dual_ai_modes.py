@@ -168,7 +168,7 @@ def test_server_watcher_releases_gpu_after_audio_even_if_browser_closed(tmp_path
     assert released == ["audio-1"]
 
 
-def test_browser_status_avoids_duplicate_wav_download(tmp_path, monkeypatch):
+def test_browser_status_avoids_duplicate_mp3_download(tmp_path, monkeypatch):
     import importlib
     module = importlib.import_module("pocket_orchestra.app")
     monkeypatch.setattr(module, "_jobdir", lambda job_id: tmp_path)

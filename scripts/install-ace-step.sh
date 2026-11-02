@@ -139,7 +139,7 @@ UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
 Restart=no
-RuntimeMaxSec=3600
+RuntimeMaxSec=10800
 
 [Install]
 WantedBy=default.target
