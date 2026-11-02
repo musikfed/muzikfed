@@ -273,9 +273,10 @@ async function aceRefresh(){
     const r=await fetch('/api/vocal/status',{cache:'no-store'});
     const d=await r.json();
     aceAvailable=!!d.available;
-    $('aceStatus').textContent=d.audio_job_active?'RTX занята песней':
+    $('aceStatus').textContent=d.audio_job_active?'RTX занята песней ACE-Step':
+      d.score_job_active?'RTX занята партитурой Qwen':
       d.ace_installed?'Установлена · запуск по кнопке':d.available?'Модель работает':'Не установлена';
-    setAceButtons(aceBusy||!!d.audio_job_active);
+    setAceButtons(aceBusy||!!d.audio_job_active||!!d.score_job_active);
     if(!aceAvailable)$('aceMessage').textContent='Для готовых песен нужна ACE-Step 1.5. На CORE: bash scripts/install-ace-step.sh. После установки кнопки будут сами запускать и выключать модель.';
   }catch(e){aceAvailable=false;$('aceStatus').textContent='Нет связи';setAceButtons(true)}
 }
