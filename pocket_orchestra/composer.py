@@ -28,6 +28,7 @@ class Config:
     climax: float = 0.73
     seed: int = 42
     choir_vowel: str = "Ahh"
+    vocal_timbre: str = "auto"  # hint to ACE-Step, not guaranteed singer identity
     use_ollama: bool = False
     model: str = "qwen3:8b"
     style: str = "auto"
@@ -53,6 +54,8 @@ class Config:
                 raise ValueError(f"{name} должен быть от 0 до 1")
         if self.choir_entry != -1 and not (0 <= self.choir_entry <= .9):
             raise ValueError("choir_entry: -1 (авто) или от 0 до 0.9")
+        if self.vocal_timbre not in ("auto", "soprano", "mezzo", "tenor", "baritone", "bass", "duet"):
+            raise ValueError("Неизвестный тип певческого голоса")
         if self.choir_vowel not in ("Ahh", "Ooh", "Mmm"):
             raise ValueError("Допустимые гласные: Ahh, Ooh, Mmm")
         if not (0 <= self.seed < 2**32):
