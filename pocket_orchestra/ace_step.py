@@ -14,9 +14,10 @@ import urllib.parse
 import urllib.request
 
 from .hybrid import build_payload
+from .audio_export import create_mp3
 
 URL = "http://127.0.0.1:8001"
-MAX_DOWNLOAD = 120 * 1024 * 1024
+MAX_DOWNLOAD = 256 * 1024 * 1024  # 10min PCM WAV at 48 kHz/stereo; stream to disk
 RESULT_NAME = "neural_song.wav"
 
 
@@ -106,16 +107,28 @@ def poll(job_dir: Path, *, download: bool = True) -> dict:
     if "path" not in urllib.parse.parse_qs(parts.query):
         raise ValueError("ACE-Step не указал путь к аудиофайлу")
     request = urllib.request.Request(URL + audio_path)
-    with urllib.request.urlopen(request, timeout=35) as stream:
-        audio = stream.read(MAX_DOWNLOAD + 1)
-    if len(audio) > MAX_DOWNLOAD:
-        raise ValueError("Слишком большой WAV от ACE-Step")
-    if not (audio.startswith(b"RIFF") and audio[8:12] == b"WAVE"):
-        raise ValueError("ACE-Step вернул не WAV; проверь audio_format и конфигурацию модели")
     target = job_dir / RESULT_NAME
     temp = job_dir / "neural_song.pending"
-    temp.write_bytes(audio)
-    os.replace(temp, target)
+    mp3_target = job_dir / "neural_song.mp3"
+    # Don't materialize a 5–10 min uncompressed WAV in RAM. Download on disk
+    # in bounded chunks; no externally supplied URL can escape ACE localhost.
+    try:
+        with urllib.request.urlopen(request, timeout=60) as stream, temp.open("wb") as sink:
+            header = stream.read(12)
+            if not (header.startswith(b"RIFF") and header[8:12] == b"WAVE"):
+                raise ValueError("ACE-Step вернул не WAV; проверь audio_format и конфигурацию модели")
+            sink.write(header)
+            size = len(header)
+            while chunk := stream.read(1024 * 1024):
+                size += len(chunk)
+                if size > MAX_DOWNLOAD:
+                    raise ValueError("Слишком большой WAV от ACE-Step (макс. 256 МиБ)")
+                sink.write(chunk)
+        # Best effort sharing copy; no codec loss in the original WAV.
+        create_mp3(temp, mp3_target)
+        os.replace(temp, target)
+    finally:
+        temp.unlink(missing_ok=True)
     # In description-only mode the real ACE-Step LM can write the lyrics.
     # Save the ACTUAL text returned by the model; never substitute hardcoded verses.
     if not (job_dir / "lyrics.txt").exists() and isinstance(result[0], dict):
