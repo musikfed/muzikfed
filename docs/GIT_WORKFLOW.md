@@ -13,6 +13,8 @@
 sudo apt update
 sudo apt install -y git curl fluidsynth fluid-soundfont-gm
 findmnt -T /1tbdisk       # сначала убедись, что диск подключён
+# Если каталог ещё отсутствует, дать обычному пользователю права только на папку проекта:
+sudo install -d -o "$(id -un)" -g "$(id -gn)" -m 755 /1tbdisk/muzikfed
 git clone https://github.com/musikfed/muzikfed.git /1tbdisk/muzikfed
 cd /1tbdisk/muzikfed
 bash scripts/install-core.sh
