@@ -80,3 +80,18 @@ def test_dashboard_exposes_optional_neural_controls():
     assert 'id="aceGenerate"' in page
     assert 'id="aceStatus"' in page
     assert "/api/vocal/status" in page
+
+
+def test_completed_neural_song_is_downloadable(tmp_path, monkeypatch):
+    import importlib
+    import uuid
+    module = importlib.import_module("pocket_orchestra.app")
+    monkeypatch.setattr(module, "OUTPUTS", tmp_path)
+    job_id = str(uuid.uuid4())
+    out = tmp_path / job_id
+    out.mkdir()
+    wav = b"RIFF" + (40).to_bytes(4, "little") + b"WAVEfmt " + b"\\0" * 36
+    (out / "neural_song.wav").write_bytes(wav)
+    response = client.get(f"/api/artifacts/{job_id}/neural_song.wav")
+    assert response.status_code == 200, response.text
+    assert response.content == wav
