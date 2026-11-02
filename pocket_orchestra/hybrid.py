@@ -54,7 +54,8 @@ def build_payload(job_dir: Path, mode: str = "original") -> tuple[dict, str]:
     if is_voice and not lyrics:
         # Let the local model propose words from the real prompt, never hardcoded verses.
         payload["sample_query"] = f"Original Russian lyrics, with natural rhymes. {topic}"
-        payload["sample_mode"] = True
+        # Official API accepts sample_query alone for description-led lyrics.
+        # No sample_mode=True: that requests random sample generation.
     if mode == "guided":
         if is_voice and not lyrics:
             raise ValueError("Для гибридного вокала впиши свой текст песни или получи его через Ollama.")

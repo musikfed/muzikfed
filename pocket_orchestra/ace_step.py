@@ -116,4 +116,11 @@ def poll(job_dir: Path, *, download: bool = True) -> dict:
     temp = job_dir / "neural_song.pending"
     temp.write_bytes(audio)
     os.replace(temp, target)
+    # In description-only mode the real ACE-Step LM can write the lyrics.
+    # Save the ACTUAL text returned by the model; never substitute hardcoded verses.
+    if not (job_dir / "lyrics.txt").exists() and isinstance(result[0], dict):
+        generated = result[0].get("lyrics")
+        if (isinstance(generated, str) and 0 < len(generated) <= 12000
+                and generated.strip() not in ("[Instrumental]", "instrumental")):
+            (job_dir / "lyrics.txt").write_text(generated.strip() + "\n", encoding="utf-8")
     return {"state": "complete", "url_ready": True}
