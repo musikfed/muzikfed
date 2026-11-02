@@ -42,7 +42,7 @@ def test_bridged_song_creates_local_mp3(tmp_path, monkeypatch):
         def __enter__(self): return self
         def __exit__(self, *args): self.close()
 
-    wav_bytes = b"RIFF" + (40).to_bytes(4, "little") + b"WAVEfmt " + b"\0" * 36
+    mp3_bytes = b"ID3" + b"\0" * 20 + b"\xff\xfb" * 64
     monkeypatch.setattr(ace_step, "_request", api_request)
     monkeypatch.setattr(ace_step.urllib.request, "urlopen",
                         lambda *args, **kwargs: FakeStream(mp3_bytes))
@@ -54,7 +54,8 @@ def test_bridged_song_creates_local_mp3(tmp_path, monkeypatch):
     assert "a cappella" in calls[0][1]["prompt"]
     result = ace_step.poll(job)
     assert result["url_ready"]
-    assert (job / "neural_song.mp3").read_bytes() == mp3_bytes\n    assert not (job / "neural_song.wav").exists()
+    assert (job / "neural_song.mp3").read_bytes() == mp3_bytes
+    assert not (job / "neural_song.wav").exists()
     assert ace_step.poll(job)["state"] == "complete"
 
 
@@ -90,7 +91,7 @@ def test_completed_neural_mp3_is_downloadable(tmp_path, monkeypatch):
     job_id = str(uuid.uuid4())
     out = tmp_path / job_id
     out.mkdir()
-    wav = b"RIFF" + (40).to_bytes(4, "little") + b"WAVEfmt " + b"\\0" * 36
+    mp3 = b"ID3" + b"\0" * 20 + b"\xff\xfb" * 64
     (out / "neural_song.mp3").write_bytes(mp3)
     response = client.get(f"/api/artifacts/{job_id}/neural_song.mp3")
     assert response.status_code == 200, response.text
@@ -110,7 +111,7 @@ def test_songwriter_lyrics_are_saved_from_real_ace_response(tmp_path, monkeypatc
         def __enter__(self): return self
         def __exit__(self, *args): self.close()
 
-    sound = b"RIFF" + (44).to_bytes(4, "little") + b"WAVEfmt " + b"\\0" * 36
+    sound = b"ID3" + b"\0" * 20 + b"\xff\xfb" * 64
     monkeypatch.setattr(ace_step.urllib.request, "urlopen",
                         lambda *args, **kwargs: FakeStream(sound))
     result = ace_step.poll(tmp_path)
