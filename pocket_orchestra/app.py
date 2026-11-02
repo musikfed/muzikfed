@@ -97,22 +97,25 @@ def generate(payload: GenerateRequest):
             plan = generate_plan(cfg)
             llm_message = f"LLM: {cfg.model}; план получен и проверен"
         except (RuntimeError, ValueError) as e:
-            llm_message = f"Ollama недоступна — использован встроенный композитор. {str(e)[:250]}"
+            raise HTTPException(503, f"Выбран режим Ollama, но музыкальный AI-план не получен: {str(e)[:200]}") from e
     piece = compose(cfg, plan)
     voice_result = optimize_satb(piece)
     piece.planning["satb_optimization"] = voice_result
     lyrics_text = None
     if "soprano" in piece.tracks:
-        lyrics_text = draft_lyrics(cfg)
-        lyric_mode = "user" if cfg.lyrics.strip() else "template_draft"
-        if cfg.use_ollama and not cfg.lyrics.strip():
+        lyrics_text = cfg.lyrics.strip() or None
+        lyric_mode = "user" if lyrics_text else "not_provided"
+        if cfg.use_ollama and not lyrics_text:
             try:
                 lyrics_text = generate_lyrics(cfg)
                 lyric_mode = f"ollama:{cfg.model}"
-                llm_message += "; русский текст написан LLM"
+                llm_message += "; оригинальные русские стихи написаны LLM"
             except (RuntimeError, ValueError) as exc:
-                llm_message += f"; текст по шаблону (Ollama не ответила: {str(exc)[:100]})"
-        piece.planning["lyrics_on_soprano_notes"] = annotate_score_lyrics(piece, lyrics_text)
+                raise HTTPException(
+                    503, f"Оllama не сочинила стихов. Впиши свой текст или проверь Ollama: {str(exc)[:150]}"
+                ) from exc
+        if lyrics_text:
+            piece.planning["lyrics_on_soprano_notes"] = annotate_score_lyrics(piece, lyrics_text)
         piece.planning["lyric_mode"] = lyric_mode
         piece.planning["sung_audio_available"] = False
     report = inspect(piece)
@@ -120,7 +123,7 @@ def generate(payload: GenerateRequest):
     out = OUTPUTS / job_id
     out.mkdir(parents=True)
     try:
-        if lyrics_text is not None:
+        if lyrics_text:
             (out / "lyrics.txt").write_text(lyrics_text + "\n", encoding="utf-8")
         write_musicxml(piece, out / "score.musicxml")
         write_midi(piece, out / "score.mid")
@@ -136,7 +139,7 @@ def generate(payload: GenerateRequest):
                 write_musicxml(accompaniment, out / f"{basename}.musicxml")
                 write_midi(accompaniment, out / f"{basename}.mid")
         manifest = {"composition": piece.summary(), "quality": report, "llm": llm_message,
-                    "lyrics_note": "Русский текст записан в lyrics.txt и нотах, но FluidSynth не поёт слова",
+                    "lyrics_note": "Если введены или получены настоящие стихи — они в lyrics.txt; FluidSynth слов не произносит",
                     "renderer": "Final audio should be exported from MuseScore Studio + MuseSounds on .103"}
         (out / "report.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         render_message = _render(out) if payload.render_preview else "Черновой WAV не запрошен"
