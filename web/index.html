@@ -44,9 +44,10 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <div class="field"><label for="prompt">Описание настроения, развития и звучания</label><textarea id="prompt" maxlength="4000">Тревожное начало на виолончелях; постепенно вступают деревянные духовые, развивается надежда. Затем величественная кульминация с валторнами и трубами, в конце светлая тихая кода.</textarea><div class="hint">Режим Ollama позволяет LLM предложить гармонию и мотив. Без Ollama работает автономный композитор с заданной музыкальной формой.</div></div>
 <div class="grid2"><div class="field"><label for="ensemble">Состав</label><select id="ensemble"><option value="orchestra" selected>Симфонический оркестр</option><option value="quartet">Струнный квартет</option><option value="choir">Нотный хор SATB (Ahh/Ooh/Mmm)</option><option value="orchestra_choir">Оркестр + SATB хор</option><option value="quartet_choir">Струнный квартет + SATB</option></select></div>
 <div class="field" id="choirVowelField"><label for="vowel">Гласная хора</label><select id="vowel"><option>Ahh</option><option>Ooh</option><option>Mmm</option></select></div></div><div class="hint" id="ensembleHelp" style="margin:-6px 0 14px"></div><div class="field"><label for="scoreEngine">Движок сочинения нот</label>
-<select id="scoreEngine"><option value="rules">Обычный нотный композитор (CPU)</option>
+<select id="scoreEngine"><option value="rules">CPU: нотный алгоритм (без ИИ)</option>
 <option value="ai_polyphony">ИИ-полифонист Qwen / Ollama — реальные ноты двух голосов</option></select>
-<div class="hint">Второй движок вызывает Qwen только для нот и контрапункта, затем освобождает VRAM. Качество уровня Баха не гарантируется; ноты сохраняются в MIDI/MusicXML.</div></div>
+<div class="hint">Второй движок вызывает Qwen для нот и контрапункта, затем освобождает VRAM. Это экспериментальная двухголосная полифония, не доказанное качество Баха.</div>
+<div class="hint" id="qwenStatus">Проверяем локальную Ollama и модель qwen3:8b…</div></div>
 <div class="field"><label for="style">Стиль музыки</label><select id="style">
 <option value="auto">Авто — по описанию</option>
 <option value="cinematic">Симфонический / кино</option>
@@ -195,6 +196,19 @@ $('resetSettings').addEventListener('click',()=>{
   try{localStorage.removeItem(SETTINGS_KEY);}catch{}
   window.location.reload();
 });
+async function checkQwen(){
+  try{
+    const r=await fetch('/api/engines',{cache:'no-store'});
+    if(!r.ok)throw Error('HTTP '+r.status);
+    const d=await r.json(), q=d.score_ai||{};
+    $('qwenStatus').textContent=q.message||
+      (q.model_installed?'Qwen доступен':'Модель Qwen не обнаружена');
+  }catch(e){
+    $('qwenStatus').textContent='Статус Qwen недоступен: '+e.message;
+  }
+}
+checkQwen();
+$('scoreEngine').addEventListener('change',checkQwen);
 async function ping(){try{const r=await fetch('/api/health');if(!r.ok)throw Error();const d=await r.json();$('statusDot').classList.add('up');$('serverStatus').textContent='CORE .100 · '+(d.renderer?'черновой рендер доступен':'только партитуры / MIDI')}catch{$('serverStatus').textContent='Нет соединения с сервером'}}ping();
 // Live status intentionally does not depend on an active musical job.
 let monitorBusy=false;
