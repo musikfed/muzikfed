@@ -156,6 +156,7 @@ $('lyricsField').classList.toggle('hide',!hasChoir);
 $('brassField').classList.toggle('hide',!hasBrass);
 $('modelField').classList.toggle('hide',!c.use_ollama);
 $('ensembleHelp').textContent=ensembleDescriptions[c.ensemble];
+$('aceGenerate').textContent=hasChoir?'🎤 Создать песню с русским вокалом по промпту':'🎻 Создать инструментальную AI-композицию';
 $('llmHelp').textContent=c.use_ollama?'Ollama должна работать на CORE: 127.0.0.1:11434, модель '+c.model+'. Она предлагает мотив, гармонию и для хора черновик русских слов; при ошибке работает обычный композитор.':'LLM выключена: Python создаёт ноты сам, для хора слова — простой редактируемый черновик. Включи Ollama для AI-текста.';
 for(const name of vals){$(name+'Value').textContent=name==='tempo'?c.tempo+' BPM':Math.round((name==='brass'?c.brass_level:c[name])*100)+'%'}$('duration').textContent=Math.round(c.bars*4*60/c.tempo)+' сек.';$('pieceTitle').textContent=c.title;$('pieceCaption').textContent=c.key+' '+c.mode+' · '+c.tempo+' BPM · '+c.bars+' тактов · '+{orchestra:'Оркестр',quartet:'Струнный квартет',quartet_choir:'Струнный квартет + SATB',choir:'Вокальный SATB',orchestra_choir:'Оркестр и SATB'}[c.ensemble];renderTimeline(c.bars)}
 for(const key of [...vals,'title','key','mode','bars','choirEntry','useOllama','model','style','lyrics','scoreEngine']) $(key).addEventListener('input',preview);
@@ -270,10 +271,11 @@ async function createAiSong(mode){
   if(!window.confirm(mode==='guided'?'Создать MIDI и переработать его нейросетью? Мелодия может измениться.':'Создать новую песню прямо по текущему промпту и тексту на RTX 3060?'))return;
   aceBusy=true;setAceButtons(true);$('aceOutput').classList.add('hide');
   try{
-    $('aceMessage').textContent='Создаём музыкальный проект по твоим параметрам...';
-    // A dedicated click always uses the CURRENT prompt; never a stale previous job.
+    $('aceMessage').textContent=mode==='original'?'Передаём твой промпт напрямую аудиомодели...':'Сочиняем реальную MIDI-партитуру для гибрида...';
+    // Original audio is directly text-to-song. Only hybrid requires score/MIDI first.
     const cfg=config();
-    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+    const endpoint=mode==='original'?'/api/audio/project':'/api/generate';
+    const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({config:cfg,render_preview:mode==='guided'})});
     const d=await r.json();
     if(!r.ok)throw Error(typeof d.detail==='string'?d.detail:JSON.stringify(d.detail));
