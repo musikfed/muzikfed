@@ -255,7 +255,14 @@ def _watch_audio_job(job_id: str) -> None:
     also limits the independent model service as a crash-safety fallback.
     """
     import time
-    deadline = time.monotonic() + 1200
+    # Long tracks need more than the former fixed 20-minute watcher window.
+    # The service has a longer wall-clock cap, and the GPU lease is serialized.
+    try:
+        report = json.loads((_jobdir(job_id) / "report.json").read_text(encoding="utf-8"))
+        duration = int(report["composition"]["config"].get("ai_duration") or 300)
+    except (OSError, ValueError, KeyError, TypeError):
+        duration = 300
+    deadline = time.monotonic() + max(1800, min(10200, duration * 12))
     while time.monotonic() < deadline:
         time.sleep(6)
         try:
