@@ -281,9 +281,7 @@ def vocal_engine_poll(job_id: str):
     if status.get("url_ready") or status.get("state") == "failed":
         gpu_control.release_audio(job_id)
     if status.get("url_ready"):
-        status["wav_url"] = f"/api/artifacts/{job_id}/neural_song.wav"
-        if (job / "neural_song.mp3").is_file():
-            status["mp3_url"] = f"/api/artifacts/{job_id}/neural_song.mp3"
+        status["mp3_url"] = f"/api/artifacts/{job_id}/neural_song.mp3"
     return status
 
 
