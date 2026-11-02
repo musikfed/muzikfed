@@ -101,11 +101,11 @@ def _render(path: Path, *, guide_for_ai: bool = False) -> str:
         mp3 = path / "preview.mp3"
         result = subprocess.run([encoder, "-hide_banner", "-nostdin", "-loglevel",
                                  "error", "-y", "-i", str(source), "-c:a", "libmp3lame",
-                                 "-b:a", "192k", str(mp3)],
+                                 "-b:a", "192k", "-t", "25", str(mp3)],
                                 capture_output=True, text=True, timeout=240, check=False)
         if result.returncode or not mp3.is_file():
             return "Ошибка MP3-конвертации: " + result.stderr[-250:]
-        return "Предпрослушивание создано в MP3 через FluidSynth (не MuseSounds)."
+        return "Готов короткий MIDI-прослушиватель MP3 (первые 25 секунд), MIDI/MusicXML полные."
     except (OSError, subprocess.TimeoutExpired) as exc:
         return "Рендер завершился ошибкой: " + str(exc)[:200]
     finally:
