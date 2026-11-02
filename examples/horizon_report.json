@@ -1,0 +1,158 @@
+{
+  "composition": {
+    "config": {
+      "title": "Свет за горизонтом",
+      "prompt": "Тревожное начало на виолончелях; постепенно вступают деревянные духовые, развивается надежда. Затем величественная кульминация с валторнами, трубами и хором, в конце светлая тихая кода.",
+      "ensemble": "orchestra_choir",
+      "key": "D",
+      "mode": "minor",
+      "tempo": 94,
+      "bars": 24,
+      "density": 0.55,
+      "tension": 0.7,
+      "expression": 0.8,
+      "humanize": 0.25,
+      "brass_level": 0.65,
+      "choir_entry": -1.0,
+      "climax": 0.73,
+      "seed": 42,
+      "choir_vowel": "Ahh",
+      "use_ollama": false,
+      "model": "qwen3:8b"
+    },
+    "sections": [
+      "A",
+      "A",
+      "A",
+      "A",
+      "A′",
+      "A′",
+      "A′",
+      "A′",
+      "B",
+      "B",
+      "B",
+      "B",
+      "A″",
+      "A″",
+      "A″",
+      "A″",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A′",
+      "A′",
+      "A′",
+      "A′"
+    ],
+    "harmony": [
+      0,
+      6,
+      3,
+      4,
+      0,
+      6,
+      3,
+      4,
+      3,
+      5,
+      4,
+      0,
+      0,
+      6,
+      3,
+      4,
+      0,
+      6,
+      3,
+      4,
+      0,
+      6,
+      3,
+      0
+    ],
+    "parts": {
+      "violin_1": 72,
+      "violin_2": 48,
+      "viola": 48,
+      "cello": 56,
+      "bass": 24,
+      "flute": 30,
+      "oboe": 12,
+      "clarinet": 96,
+      "horn": 18,
+      "trumpet": 22,
+      "harp": 96,
+      "timpani": 9,
+      "soprano": 12,
+      "alto": 12,
+      "tenor": 12,
+      "choral_bass": 12
+    },
+    "planning": {
+      "source": "rule_based",
+      "notes": "Recurrent motif, diatonic harmony, contrasting B section, cadential tonic",
+      "prompt_cues": {
+        "cello_intro": true,
+        "choir_enters_late": true,
+        "quiet_coda": true,
+        "parser": "simple cue heuristics (not full NLP)"
+      }
+    }
+  },
+  "quality": {
+    "passed": 7,
+    "total": 7,
+    "checks": [
+      {
+        "id": "ranges",
+        "ok": true,
+        "description": "Диапазоны инструментов"
+      },
+      {
+        "id": "overlaps",
+        "ok": true,
+        "description": "Нет наложений в одной партии"
+      },
+      {
+        "id": "bar_count",
+        "ok": true,
+        "description": "События укладываются в форму"
+      },
+      {
+        "id": "harmony",
+        "ok": true,
+        "description": "Опорные доли согласованы с гармонией"
+      },
+      {
+        "id": "melodic_leaps",
+        "ok": true,
+        "description": "Нет избытка больших мелодических скачков"
+      },
+      {
+        "id": "satb_crossing",
+        "ok": true,
+        "description": "Хоровые голоса не перекрещиваются"
+      },
+      {
+        "id": "satb_parallel",
+        "ok": true,
+        "description": "Нет параллельных квинт и октав на границах тактов"
+      }
+    ],
+    "statistics": {
+      "notes": 579,
+      "parts": 16,
+      "leap_rate": 0.0,
+      "strong_beat_chord_ratio": 0.937,
+      "silent_part_bars": 107,
+      "satb_parallel_perfects": 0,
+      "satb_crossings": 0
+    },
+    "warnings": [
+      "Паузы в оркестровке: 107 пустых партие-тактов — могут быть намеренными"
+    ],
+    "notice": "Статические проверки не оценивают вкус, драматургию и реализм звучания."
+  }
+}
