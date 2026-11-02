@@ -1,81 +1,120 @@
-# Installation / deployment (Ubuntu CORE .100, Windows GRAPHICS .103, Acer)
+# Развёртывание Pocket Orchestra на CORE .100
 
-## Network topology
+> **Актуальная точка входа:** http://192.168.0.100:9095  
+> Ubuntu Server 24.04 (CORE) — API и генератор; Acer — браузер через существующий VPN/WireGuard; Windows GRAPHICS .103 — MuseScore/MuseSounds.
 
-- `CORE .100` (Ubuntu Server 24.04, RTX 3060 12GB): API, MIDI/MusicXML generation, local Ollama if chosen, fast FluidSynth preview.
-- `GRAPHICS .103` (Windows 11, RX 7600 XT): MuseScore Studio + MuseSounds Core for manual *high-quality* WAV/FLAC export.
-- `Acer` (Windows 11): remote SSH/RDP/WireGuard client and web control desk. No web browser or desktop is required on Ubuntu.
+## Сеть и порт
 
-`.100` and `.103` are only descriptions of your hosts, **not validated full IP addresses**. Use the actual WireGuard address. The API binds to **127.0.0.1:8765** by default.
+- CORE имеет адрес **192.168.0.100**, веб-пульт слушает **TCP 9095** именно на этом IPv4-адресе.
+- Не нужен SSH-туннель или изменение адреса в браузере: на Acer с уже работающим маршрутом VPN открыть **http://192.168.0.100:9095**.
+- Для проверки API: **http://192.168.0.100:9095/api/health**.
+- Сервер **обязательно** должен иметь адрес `192.168.0.100` на одном из своих интерфейсов: `ip -4 addr show`. Если адрес принадлежит только роутеру или NAT, привязка к нему не запустится.
+- Приложение **не имеет авторизации** в версии 0.1. Оставь доступ только доверенной LAN/VPN; не открывай TCP 9095 на белом IP, не пробрасывай его на внешнем роутере. Любой клиент с доступом к порту сможет отправлять запросы генерации.
+- Если включён UFW, разрешай вход только от реальной VPN/LAN-подсети, а не от всего интернета. Сначала посмотри `sudo ufw status verbose`. Подсеть VPN не угадываем.
 
-## One-time CORE setup (from a normal unprivileged SSH account)
+## 1. Первая загрузка проекта на CORE .100
+
+Подключись с Acer в PowerShell:
+
+```powershell
+ssh user@192.168.0.100
+```
+
+Выполни следующие команды **в терминале Ubuntu .100** от обычного пользователя, НЕ от root:
 
 ```bash
 sudo apt update
-sudo apt install -y git fluidsynth fluid-soundfont-gm
-# uv 0.12.0 + Python 3.12 already exist on the user's CORE.
+sudo apt install -y git curl fluidsynth fluid-soundfont-gm
+
+# GitHub -> сервер: скачать весь код, интерфейс, документацию и скрипты.
 git clone https://github.com/musikfed/muzikfed.git ~/pocket-orchestra
 cd ~/pocket-orchestra
+
+# uv 0.12.0 и Python 3.12 уже есть на CORE. Скрипт установит зависимости,
+# запустит тесты и создаст пользовательский systemd-сервис.
 bash scripts/install-core.sh
+
 systemctl --user status pocket-orchestra --no-pager
-curl --fail http://127.0.0.1:8765/api/health
+curl -fsS http://192.168.0.100:9095/api/health
 ```
 
-If `systemctl --user` is not available, use `uv run pocket-orchestra` while logged in. An optional user service that persists after logout may require a sysadmin to run `sudo loginctl enable-linger "$USER"`; this is *not* done automatically.
+Открой на Acer браузер: **http://192.168.0.100:9095**. Дополнительный SSH-туннель **не нужен**, если VPN уже маршрутизирует этот адрес.
 
-Check preview availability (the health endpoint reports whether `fluidsynth` and its SoundFont are detected). The preview is deliberately not the final-quality MuseSounds mix.
+Чтобы пользовательский сервис работал и после выхода из SSH, а также запускался после перезагрузки сервера, при необходимости однократно выполни на CORE:
 
-## Deploy/update from Acer via SSH over VPN
+```bash
+sudo loginctl enable-linger "$USER"
+systemctl --user enable --now pocket-orchestra
+```
 
-Acer with WSL, Git Bash, or any Bash-capable shell:
+`install-core.sh` не перезаписывает личные сертификаты, WireGuard-настройки и пользовательские файлы. Существующие файлы внутри `outputs/` остаются локальными и игнорируются Git.
+
+## 2. Развёртывание на CORE одной командой с Acer
+
+На Acer в **WSL Ubuntu** или **Git Bash** (нужны `git`, `bash`, `ssh`):
 
 ```bash
 git clone https://github.com/musikfed/muzikfed.git
 cd muzikfed
-bash scripts/deploy-to-core.sh YOUR_USER@YOUR_CORE_WIREGUARD_IP
+bash scripts/deploy-to-core.sh user@192.168.0.100
 ```
 
-The script checks the remote Git checkout, performs a `git pull --ff-only` if it already exists, installs Python dependencies with `uv`, runs tests, and configures a localhost-bound `systemd --user` service. It will **stop rather than overwrite** unrelated directories or uncommitted changes.
+Этот скрипт по SSH проверит `~/pocket-orchestra` на .100, при необходимости клонирует репозиторий, иначе применит только `git pull --ff-only`, затем установит/обновит зависимости, выполнит тесты и перезапустит сервис. При локальных изменениях на сервере **остановится**, не затрёт их. Для самого первого запуска на .100 нужны `git` и `uv`; системные пакеты FluidSynth ставятся отдельно по пункту 1.
 
-From the Ubuntu server itself, after each new GitHub commit:
+Если SSH идёт по другому VPN-адресу, в аргументе скрипта укажи этот SSH-адрес; **веб-адрес всё равно остаётся http://192.168.0.100:9095**, если этот IP назначен интерфейсу сервера.
+
+## 3. Обновление после коммита в GitHub
+
+На CORE .100:
 
 ```bash
 cd ~/pocket-orchestra
 bash scripts/update-core.sh
 ```
 
-Create a local-only tunnel in the Acer PowerShell:
+Команда проверит отсутствие незакоммиченных правок, выполнит `git pull --ff-only origin main`, синхронизирует зависимости и перезапустит systemd-сервис. С Acer через SSH можно выполнить:
 
 ```powershell
-ssh -N -L 8765:127.0.0.1:8765 YOUR_USER@YOUR_CORE_WIREGUARD_IP
+ssh user@192.168.0.100 "cd ~/pocket-orchestra && bash scripts/update-core.sh"
 ```
 
-Keep the SSH process open; navigate to http://127.0.0.1:8765 on Acer. The tunnel transfers web traffic securely between Acer and CORE. If localhost port 8765 is already occupied on Acer, change its left side, e.g. `8877:127.0.0.1:8765` and browse `127.0.0.1:8877`.
+**Если обновляли файлы в GitHub через ChatGPT**, достаточно этой команды: вручную переносить ZIP не нужно.
 
-## GRAPHICS .103
+## 4. Как отправить свои изменения в GitHub (git push)
 
-1. Install MuseScore Studio and the free MuseSounds Core libraries separately on Windows .103.
-2. Download `score.musicxml` from the Pocket Orchestra dashboard on Acer and copy it to .103 through the VPN/RDP shared folders.
-3. Open it with MuseScore Studio; fix transpositions, instrument assignments and mixer sounds as needed.
-4. Export WAV or FLAC from MuseScore Studio; preserve the editable `.mscz` score.
-5. For a separated arrangement, export `choir.musicxml` or `orchestra.musicxml` and align at the same BPM. WAV stems from MuseSounds are **not yet automatically generated**.
+Инструкция с командами для Acer, Ubuntu .100, настройки Git и авторизации находится в **[GIT_WORKFLOW.md](GIT_WORKFLOW.md)**.
 
-## Optional local LLM
-
-The composer uses deterministic rules unless you enable `use_ollama` in the dashboard. Ollama and its language model must be installed independently. The LLM currently proposes bounded musical parameters, not every individual note; no promise of long-form composition or realistic Russian lyrics.
-
-## Troubleshooting
+Краткий вариант в папке репозитория (на том компьютере, где ты редактировал исходники):
 
 ```bash
-systemctl --user status pocket-orchestra --no-pager
-journalctl --user -u pocket-orchestra -n 80 --no-pager
-cd ~/pocket-orchestra && uv run pytest -q
-curl -fsS http://127.0.0.1:8765/api/health
+git status
+git pull --ff-only origin main
+git add README.md docs/DEPLOYMENT.md
+git diff --cached --check
+git diff --cached
+git commit -m "docs: update deployment guide"
+git push origin main
 ```
 
-## Security rules
+`git add` здесь **явно перечисляет изменённые файлы**: не используй `git add -A`, пока не проверил, что в проекте нет секретов. Пароли, сертификаты, `privkey.pem`, `fullchain.pem`, `.env`, ключи WireGuard и большие модели **никогда** не публикуй.
 
-- Do not commit `.env`, TLS `privkey.pem` / `fullchain.pem`, SSH keys, WireGuard credentials, private recordings, copyrighted sound libraries or model weights.
-- **Never port-forward 8765 on a public router or expose it via the white IP.** The v0.1 API has no authentication, quotas, or rate limits. SSH tunnels are the recommended access path.
-- Don't run setup scripts as root; `sudo` only for explicitly chosen OS dependencies.
-- Pin dependencies and review upstream packages before production exposure; v0.1 is a prototype, not a hardened public service.
+## 5. Диагностика на CORE .100
+
+```bash
+ip -4 addr show                          # есть ли адрес 192.168.0.100?
+systemctl --user status pocket-orchestra --no-pager
+journalctl --user -u pocket-orchestra -n 100 --no-pager
+ss -lnt | grep ':9095'                  # слушает ли процесс порт?
+curl -v http://192.168.0.100:9095/api/health
+cd ~/pocket-orchestra && uv run pytest -q
+```
+
+Если `curl` работает на CORE, а Acer не открывает страницу — проверь VPN-маршрут к `192.168.0.100` и правила firewall. Если `curl` не работает даже на CORE — сначала проверь IP-адрес интерфейса и логи systemd. Переменные `POCKET_ORCHESTRA_HOST` и `POCKET_ORCHESTRA_PORT` можно изменить при ручном запуске, но **установщик systemd** закрепляет именно `192.168.0.100:9095`.
+
+## 6. GRAPHICS .103 и качество аудио
+
+На Windows .103 устанавливаются MuseScore Studio и MuseSounds Core. Готовый `score.musicxml` с веб-пульта импортируется в MuseScore, где выбираются инструменты и экспортируется финальный WAV/FLAC. На CORE доступен только черновой FluidSynth. Автоматическое пение русского текста и MuseSounds-рендер по сети **пока не реализованы**.
+
+## Безопасность
+
+**Не отправляй на GitHub:** `~/crt-cert/fullchain.pem`, `~/crt-cert/privkey.pem`, SSH-ключи, конфигурации WireGuard, API-токены, `.env`, локальные `outputs/`, SoundFont/SFZ библиотеки и модели. Все команды выполняй обычным пользователем; `sudo` нужен только для пакетов и необязательного linger. Не пробрасывай 9095 на белый IP.
