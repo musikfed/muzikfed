@@ -16,6 +16,7 @@ from .quality import inspect
 from .harmony import optimize_satb
 from .ollama import generate_plan, generate_lyrics
 from .lyrics import draft_lyrics, annotate_score_lyrics
+from . import ace_step
 from .control import router as control_router
 from .monitor import collect_metrics
 
@@ -144,7 +145,7 @@ def generate(payload: GenerateRequest):
     urls = {"musicxml": f"/api/artifacts/{job_id}/score.musicxml",
             "midi": f"/api/artifacts/{job_id}/score.mid",
             "report": f"/api/artifacts/{job_id}/report.json"}
-    for name in ("lyrics.txt", "choir.musicxml", "choir.mid", "orchestra.musicxml", "orchestra.mid", "quartet.musicxml", "quartet.mid"):
+    for name in ("lyrics.txt", "choir.musicxml", "choir.mid", "orchestra.musicxml", "orchestra.mid", "quartet.musicxml", "quartet.mid", "neural_song.wav"):
         if (out / name).is_file():
             urls[name] = f"/api/artifacts/{job_id}/{name}"
     if (out / "preview.wav").is_file():
@@ -152,6 +153,33 @@ def generate(payload: GenerateRequest):
     return {"job_id": job_id, "urls": urls, "quality": report, "llm": llm_message,
             "lyrics": lyrics_text, "lyrics_sung": False,
             "render": render_message, "composition": piece.summary()}
+
+
+@app.get("/api/vocal/status")
+def vocal_engine_status():
+    return ace_step.status()
+
+
+@app.post("/api/vocal/start")
+def vocal_engine_start(payload: RenderRequest):
+    job = _jobdir(payload.job_id)
+    try:
+        result = ace_step.start(job)
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise HTTPException(503, str(exc)[:250]) from exc
+    return result
+
+
+@app.get("/api/vocal/poll/{job_id}")
+def vocal_engine_poll(job_id: str):
+    job = _jobdir(job_id)
+    try:
+        status = ace_step.poll(job)
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise HTTPException(503, str(exc)[:250]) from exc
+    if status.get("url_ready"):
+        status["wav_url"] = f"/api/artifacts/{job_id}/neural_song.wav"
+    return status
 
 
 @app.post("/api/render")
