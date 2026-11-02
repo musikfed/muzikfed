@@ -1,0 +1,20 @@
+[project]
+name = "pocket-orchestra"
+version = "0.1.0"
+description = "Prompt-driven orchestral score generation with a local control desk"
+requires-python = ">=3.12"
+dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "mido>=1.3,<2"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[project.scripts]
+pocket-orchestra = "pocket_orchestra.app:main"
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
