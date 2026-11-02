@@ -36,11 +36,21 @@ INSTRUMENTS = {
     "alto": Instrument("alto", "Хор — альт", 55, 74, 52, "G", "choir"),
     "tenor": Instrument("tenor", "Хор — тенор", 48, 69, 52, "G", "choir"),
     "choral_bass": Instrument("choral_bass", "Хор — бас", 40, 64, 52, "F", "choir"),
+    "chip_lead": Instrument("chip_lead", "8-bit · Pulse Lead", 60, 96, 80, "G", "synth"),
+    "chip_counter": Instrument("chip_counter", "8-bit · Второй голос", 55, 88, 81, "G", "synth"),
+    "chip_arp": Instrument("chip_arp", "8-bit · Быстрые арпеджио", 60, 96, 98, "G", "synth"),
+    "chip_bass": Instrument("chip_bass", "8-bit · Бас", 36, 65, 38, "F", "synth"),
+    "synth_lead": Instrument("synth_lead", "Synthwave · Лид", 58, 94, 81, "G", "synth"),
+    "synth_pad": Instrument("synth_pad", "Synthwave · Пэд", 48, 84, 88, "G", "synth"),
+    "synth_arp": Instrument("synth_arp", "Synthwave · Арпеджио", 58, 92, 98, "G", "synth"),
+    "synth_bass": Instrument("synth_bass", "Synthwave · Синтезаторный бас", 34, 65, 38, "F", "synth"),
 }
 STRING_QUARTET = ("violin_1", "violin_2", "viola", "cello")
 ORCHESTRA = ("violin_1", "violin_2", "viola", "cello", "bass", "flute", "oboe",
              "clarinet", "horn", "trumpet", "harp", "timpani")
 CHOIR = ("soprano", "alto", "tenor", "choral_bass")
+CHIPTUNE = ("chip_lead", "chip_counter", "chip_arp", "chip_bass")
+SYNTHWAVE = ("synth_lead", "synth_pad", "synth_arp", "synth_bass")
 
 
 def note_in_range(pc: int, target: int, inst: Instrument) -> int:

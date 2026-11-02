@@ -45,7 +45,10 @@ def generate_counterpoint(cfg: Config, *, endpoint: str = "http://127.0.0.1:1143
 кульминацией и разрешением. Не копируй известных композиторов.
 Полный художественный замысел: {cfg.prompt}
 Название: {cfg.title}. Тональность: {cfg.key} {cfg.mode}; 4/4; темп {cfg.tempo}.
-Стиль: {cfg.style}; seed для вариации: {cfg.seed}.
+Стиль: {cfg.style}; ансамбль: {cfg.ensemble}; seed для вариации: {cfg.seed}.
+Если чиптюн/Dendy: создавай запоминающийся игровой мотив и контрастную секцию;
+если synthwave: мелодия над пульсирующими синтезаторами; для оркестра —
+фразировку и встречные голоса. Приоритет — целостная оригинальная тема.
 Каждая нота - ступень выбранного лада, ЦЕЛОЕ число от -3 до 9, относительно тоники.
 Верни только JSON: верхний голос upper_a и upper_b по 4 такта, в каждом такте
 4 ступени (четверти). Нижний голос lower_a и lower_b по 4 такта, в каждом 2
@@ -74,14 +77,15 @@ def apply_counterpoint(piece: Piece, proposal: dict) -> Piece:
     """Write the AI's two independent voices as MIDI-ready Note events."""
     data = validate_proposal(proposal)
     tracks = piece.tracks
-    upper = "violin_1" if "violin_1" in tracks else "soprano"
-    lower = ("cello" if "cello" in tracks else "choral_bass"
-             if "choral_bass" in tracks else None)
-    if lower is None:
-        raise ValueError("В выбранном составе отсутствует второй голос")
+    upper = next((v for v in ("chip_lead", "synth_lead", "violin_1", "soprano")
+                  if v in tracks), None)
+    lower = next((v for v in ("chip_bass", "synth_bass", "cello", "choral_bass")
+                  if v in tracks), None)
+    if lower is None or upper is None:
+        raise ValueError("В выбранном составе отсутствуют два независимых голоса")
     cfg = piece.config
     output: dict[str, list[Note]] = {upper: [], lower: []}
-    last = {upper: 75 if upper == "violin_1" else 72, lower: 48}
+    last = {upper: 76 if upper in ("chip_lead", "synth_lead", "violin_1") else 72, lower: 48}
     for bar in range(cfg.bars):
         section = (bar // 4) % 4
         phrase = "b" if section == 2 else "a"

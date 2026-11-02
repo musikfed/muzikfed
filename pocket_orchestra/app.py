@@ -101,11 +101,11 @@ def _render(path: Path, *, guide_for_ai: bool = False) -> str:
         mp3 = path / "preview.mp3"
         result = subprocess.run([encoder, "-hide_banner", "-nostdin", "-loglevel",
                                  "error", "-y", "-i", str(source), "-c:a", "libmp3lame",
-                                 "-b:a", "192k", str(mp3)],
+                                 "-b:a", "192k", "-t", "25", str(mp3)],
                                 capture_output=True, text=True, timeout=240, check=False)
         if result.returncode or not mp3.is_file():
             return "Ошибка MP3-конвертации: " + result.stderr[-250:]
-        return "Предпрослушивание создано в MP3 через FluidSynth (не MuseSounds)."
+        return "Готов короткий MIDI-прослушиватель MP3 (первые 25 секунд), MIDI/MusicXML полные."
     except (OSError, subprocess.TimeoutExpired) as exc:
         return "Рендер завершился ошибкой: " + str(exc)[:200]
     finally:
@@ -159,7 +159,7 @@ def generate(payload: GenerateRequest):
         with session:
             plan = None
             llm_message = "Встроенный композитор: мотив + гармония + правила оркестровки"
-            if cfg.use_ollama:
+            if cfg.use_ollama or cfg.score_engine == "ai_polyphony":
                 try:
                     plan = generate_plan(cfg)
                     llm_message = f"LLM: {cfg.model}; план получен и проверен"
@@ -317,7 +317,7 @@ def vocal_engine_poll(job_id: str):
 def render_job(payload: RenderRequest):
     path = _jobdir(payload.job_id)
     result = _render(path)
-    return {"message": result, "wav_url": f"/api/artifacts/{payload.job_id}/preview.wav" if (path / "preview.wav").is_file() else None}
+    return {"message": result, "mp3_url": f"/api/artifacts/{payload.job_id}/preview.mp3" if (path / "preview.mp3").is_file() else None}
 
 
 @app.get("/api/artifacts/{job_id}/{filename}")

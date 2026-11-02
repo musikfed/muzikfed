@@ -118,6 +118,7 @@ def test_orchestra_api_ai_mode_uses_mocked_note_level_model(monkeypatch):
     monkeypatch.setattr(app_module.gpu_control, "before_score", lambda: None)
     monkeypatch.setattr(app_module.gpu_control, "unload_ollama", lambda _: None)
     monkeypatch.setattr(app_module, "generate_counterpoint", lambda cfg: PROPOSAL)
+    monkeypatch.setattr(app_module, "generate_plan", lambda cfg: {"progression_a":[0,5,2,4],"progression_b":[3,5,4,0],"motif":[4,3,2,0],"source":"ollama:mock"})
     r = TestClient(app).post("/api/generate", json={
         "config": {"ensemble": "orchestra", "bars": 8,
                    "score_engine": "ai_polyphony"},
@@ -125,6 +126,7 @@ def test_orchestra_api_ai_mode_uses_mocked_note_level_model(monkeypatch):
     })
     assert r.status_code == 200, r.text
     assert r.json()["composition"]["planning"]["ai_counterpoint"]["source"] == "ollama_note_level"
+    assert r.json()["composition"]["planning"]["source"] == "ollama:mock"
 
 
 def test_direct_neural_song_project_does_not_compose_fake_midi():
@@ -149,7 +151,7 @@ def test_direct_neural_song_project_does_not_compose_fake_midi():
 
 def test_original_song_web_calls_direct_endpoint():
     page = TestClient(app).get("/").text
-    assert "'/api/audio/project':'/api/generate'" in page
+    assert "mode==='guided'?'/api/generate':'/api/audio/project'" in page
     assert "mode==='original'" in page
 
 
