@@ -67,7 +67,7 @@ import sys
 path = pathlib.Path(sys.argv[1])
 fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
 with os.fdopen(fd, "w", encoding="utf-8") as out:
-    out.write(secrets.token_urlsafe(32) + "\\n")
+    out.write(secrets.token_urlsafe(32))
 PY
   echo "Created a private web-control token: $CONTROL_TOKEN_FILE"
 else
