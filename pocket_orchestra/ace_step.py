@@ -74,6 +74,14 @@ def poll(job_dir: Path, *, download: bool = True) -> dict:
     """Read ACE-Step result and download one validated locally hosted MP3."""
     if (job_dir / RESULT_NAME).is_file():
         return {"state": "complete", "url_ready": True}
+    error_file = job_dir / "neural_error.json"
+    if error_file.is_file():
+        try:
+            error = json.loads(error_file.read_text(encoding="utf-8"))
+            message = str(error.get("message", "Ошибка ACE-Step"))[:400]
+        except (OSError, ValueError, AttributeError):
+            message = "Ошибка ACE-Step: смотри журнал pocket-orchestra"
+        return {"state": "failed", "url_ready": False, "message": message}
     task_path = job_dir / "neural_task.json"
     if not task_path.is_file():
         raise ValueError("Нейрозадача ещё не запущена")
@@ -85,7 +93,10 @@ def poll(job_dir: Path, *, download: bool = True) -> dict:
     row = records[0]
     state = row.get("status")
     if state == 2:
-        return {"state": "failed", "message": "ACE-Step сообщил об ошибке генерации", "url_ready": False}
+        detail = row.get("error") or row.get("message") or row.get("result")
+        detail = str(detail)[:240] if detail else "проверь журнал ACE-Step"
+        return {"state": "failed", "message": "ACE-Step отклонила задачу: " + detail,
+                "url_ready": False}
     if state != 1:
         return {"state": "working", "url_ready": False}
     if not download:
