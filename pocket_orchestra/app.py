@@ -159,7 +159,7 @@ def generate(payload: GenerateRequest):
         with session:
             plan = None
             llm_message = "Встроенный композитор: мотив + гармония + правила оркестровки"
-            if cfg.use_ollama:
+            if cfg.use_ollama or cfg.score_engine == "ai_polyphony":
                 try:
                     plan = generate_plan(cfg)
                     llm_message = f"LLM: {cfg.model}; план получен и проверен"
