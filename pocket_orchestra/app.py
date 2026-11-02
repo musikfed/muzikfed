@@ -282,6 +282,8 @@ def vocal_engine_poll(job_id: str):
         gpu_control.release_audio(job_id)
     if status.get("url_ready"):
         status["wav_url"] = f"/api/artifacts/{job_id}/neural_song.wav"
+        if (job / "neural_song.mp3").is_file():
+            status["mp3_url"] = f"/api/artifacts/{job_id}/neural_song.mp3"
     return status
 
 
@@ -294,7 +296,7 @@ def render_job(payload: RenderRequest):
 
 @app.get("/api/artifacts/{job_id}/{filename}")
 def artifact(job_id: str, filename: str):
-    if filename not in ("score.musicxml", "score.mid", "report.json", "preview.wav", "lyrics.txt", "choir.musicxml", "choir.mid", "orchestra.musicxml", "orchestra.mid", "quartet.musicxml", "quartet.mid", "neural_song.wav"):
+    if filename not in ("score.musicxml", "score.mid", "report.json", "preview.wav", "lyrics.txt", "choir.musicxml", "choir.mid", "orchestra.musicxml", "orchestra.mid", "quartet.musicxml", "quartet.mid", "neural_song.wav", "neural_song.mp3"):
         raise HTTPException(404, "Unsupported artifact")
     path = _jobdir(job_id) / filename
     if not path.is_file():
