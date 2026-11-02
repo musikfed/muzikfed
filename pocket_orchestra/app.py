@@ -128,51 +128,51 @@ def generate(payload: GenerateRequest):
         cfg = Config.from_dict(payload.config)
     except (TypeError, ValueError) as e:
         raise HTTPException(422, str(e)) from e
-    if cfg.use_ollama or cfg.score_engine == "ai_polyphony":
-        try:
-            gpu_control.before_score()
-        except (RuntimeError, OSError) as exc:
-            raise HTTPException(409, str(exc)) from exc
-    plan = None
-    llm_message = "Встроенный композитор: мотив + гармония + правила оркестровки"
-    if cfg.use_ollama:
-        try:
-            plan = generate_plan(cfg)
-            llm_message = f"LLM: {cfg.model}; план получен и проверен"
-        except (RuntimeError, ValueError) as e:
-            gpu_control.unload_ollama(cfg.model)
-            raise HTTPException(503, f"Выбран режим Ollama, но музыкальный AI-план не получен: {str(e)[:200]}") from e
-    piece = compose(cfg, plan)
-    voice_result = optimize_satb(piece)
-    piece.planning["satb_optimization"] = voice_result
-    if cfg.score_engine == "ai_polyphony":
-        try:
-            proposal = generate_counterpoint(cfg)
-            apply_counterpoint(piece, proposal)
-            llm_message += f"; AI-полифония: ноты двух голосов написал {cfg.model}"
-        except (RuntimeError, ValueError) as exc:
-            gpu_control.unload_ollama(cfg.model)
-            raise HTTPException(503, f"ИИ-полифония не создана: {str(exc)[:180]}") from exc
-    lyrics_text = None
-    if "soprano" in piece.tracks:
-        lyrics_text = cfg.lyrics.strip() or None
-        lyric_mode = "user" if lyrics_text else "not_provided"
-        if cfg.use_ollama and not lyrics_text:
-            try:
-                lyrics_text = generate_lyrics(cfg)
-                lyric_mode = f"ollama:{cfg.model}"
-                llm_message += "; оригинальные русские стихи написаны LLM"
-            except (RuntimeError, ValueError) as exc:
-                gpu_control.unload_ollama(cfg.model)
-                raise HTTPException(
-                    503, f"Оllama не сочинила стихов. Впиши свой текст или проверь Ollama: {str(exc)[:150]}"
-                ) from exc
-        if lyrics_text:
-            piece.planning["lyrics_on_soprano_notes"] = annotate_score_lyrics(piece, lyrics_text)
-        piece.planning["lyric_mode"] = lyric_mode
-        piece.planning["sung_audio_available"] = False
-    if cfg.use_ollama or cfg.score_engine == "ai_polyphony":
-        gpu_control.unload_ollama(cfg.model)
+    # Keep Qwen's VRAM lease for the ENTIRE composition/lyric LLM operation.
+    # The old preflight-only check had a race with simultaneous audio requests.
+    from contextlib import nullcontext
+    session = (gpu_control.score_session(cfg.model)
+               if cfg.use_ollama or cfg.score_engine == "ai_polyphony"
+               else nullcontext())
+    try:
+        with session:
+            plan = None
+            llm_message = "Встроенный композитор: мотив + гармония + правила оркестровки"
+            if cfg.use_ollama:
+                try:
+                    plan = generate_plan(cfg)
+                    llm_message = f"LLM: {cfg.model}; план получен и проверен"
+                except (RuntimeError, ValueError) as e:
+                    raise HTTPException(503, f"Выбран режим Ollama, но музыкальный AI-план не получен: {str(e)[:200]}") from e
+            piece = compose(cfg, plan)
+            voice_result = optimize_satb(piece)
+            piece.planning["satb_optimization"] = voice_result
+            if cfg.score_engine == "ai_polyphony":
+                try:
+                    proposal = generate_counterpoint(cfg)
+                    apply_counterpoint(piece, proposal)
+                    llm_message += f"; AI-полифония: ноты двух голосов написал {cfg.model}"
+                except (RuntimeError, ValueError) as exc:
+                    raise HTTPException(503, f"ИИ-полифония не создана: {str(exc)[:180]}") from exc
+            lyrics_text = None
+            if "soprano" in piece.tracks:
+                lyrics_text = cfg.lyrics.strip() or None
+                lyric_mode = "user" if lyrics_text else "not_provided"
+                if cfg.use_ollama and not lyrics_text:
+                    try:
+                        lyrics_text = generate_lyrics(cfg)
+                        lyric_mode = f"ollama:{cfg.model}"
+                        llm_message += "; оригинальные русские стихи написаны LLM"
+                    except (RuntimeError, ValueError) as exc:
+                            raise HTTPException(
+                            503, f"Оllama не сочинила стихов. Впиши свой текст или проверь Ollama: {str(exc)[:150]}"
+                        ) from exc
+                if lyrics_text:
+                    piece.planning["lyrics_on_soprano_notes"] = annotate_score_lyrics(piece, lyrics_text)
+                piece.planning["lyric_mode"] = lyric_mode
+                piece.planning["sung_audio_available"] = False
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(409, str(exc)[:250]) from exc
     report = inspect(piece)
     job_id = str(uuid.uuid4())
     out = OUTPUTS / job_id
