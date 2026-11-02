@@ -2,6 +2,7 @@
 
 Репозиторий: **https://github.com/musikfed/muzikfed**; ветка **main**.  
 Веб-пульт на CORE: **http://192.168.0.100:9095** (по действующему LAN/VPN).
+**Все файлы проекта на CORE — в `/1tbdisk/muzikfed` на 2 ТБ диске.** Включая `.venv`, `outputs` и кэш `uv`. Файл user-unit остаётся в стандартной папке systemd в домашнем каталоге.
 
 ## Сценарий A. Загрузить всё из GitHub на сервер .100
 
@@ -11,18 +12,21 @@
 # Первый раз на .100
 sudo apt update
 sudo apt install -y git curl fluidsynth fluid-soundfont-gm
-git clone https://github.com/musikfed/muzikfed.git ~/pocket-orchestra
-cd ~/pocket-orchestra
+findmnt -T /1tbdisk       # сначала убедись, что диск подключён
+git clone https://github.com/musikfed/muzikfed.git /1tbdisk/muzikfed
+cd /1tbdisk/muzikfed
 bash scripts/install-core.sh
 
 # Проверить сервис и открыть на Acer http://192.168.0.100:9095
 curl -fsS http://192.168.0.100:9095/api/health
 ```
 
+При существующей папке `/1tbdisk/muzikfed` команда `git clone` допускает только **пустую** директорию; если в ней уже есть `.git` от этого репозитория, используй `git -C /1tbdisk/muzikfed pull --ff-only origin main`. Не удаляй и не перезаписывай чужие файлы. Скрипт `deploy-to-core.sh` выполняет эти проверки автоматически.
+
 **В дальнейшем** на Ubuntu .100:
 
 ```bash
-cd ~/pocket-orchestra
+cd /1tbdisk/muzikfed
 bash scripts/update-core.sh
 ```
 
@@ -34,7 +38,7 @@ cd muzikfed
 bash scripts/deploy-to-core.sh user@192.168.0.100
 ```
 
-Скрипт развернёт последнюю версию из GitHub, а не незакоммиченные файлы с Acer. Поэтому сначала `git push`, потом `deploy-to-core.sh`.
+Скрипт развернёт последнюю версию **строго в `/1tbdisk/muzikfed` на CORE** из GitHub, а не незакоммиченные файлы с Acer. Поэтому сначала `git push`, потом `deploy-to-core.sh`.
 
 ## Сценарий B. Изменил файлы на Acer → отправить в GitHub
 
@@ -66,7 +70,7 @@ bash scripts/deploy-to-core.sh user@192.168.0.100
 
 ```bash
 ssh user@192.168.0.100
-cd ~/pocket-orchestra
+cd /1tbdisk/muzikfed
 git status
 # Если есть незакоммиченные правки, сначала сохрани их в коммите.
 git add pocket_orchestra/app.py
@@ -85,7 +89,7 @@ bash scripts/install-core.sh
 Когда изменения уже закоммичены в репозитории через подключённый GitHub, **не надо делать `git push`**: код уже в GitHub. На сервере обнови рабочую версию:
 
 ```bash
-cd ~/pocket-orchestra
+cd /1tbdisk/muzikfed
 bash scripts/update-core.sh
 ```
 
