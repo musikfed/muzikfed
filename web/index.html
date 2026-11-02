@@ -33,7 +33,7 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--soft)}.legend i{display:inline-block;width:9px;height:9px;margin-right:5px;border-radius:2px}.sectionTag{font-size:11px;padding:5px 7px;border-radius:6px;background:#343e4e;color:var(--soft)}
 .parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(157px,1fr));gap:7px}.part{background:#252b34;border:1px solid #353e4b;border-radius:8px;padding:9px;font-size:12px;display:flex;justify-content:space-between;gap:8px}.part b{font-variant-numeric:tabular-nums;color:var(--amber);font-size:11px}
 .outputs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}.download{border-radius:9px;border:1px solid #5d6b78;background:#2a3641;color:#f4f4ee;text-align:center;text-decoration:none;padding:13px 7px;font-size:12px;font-weight:650}.download:hover{border-color:var(--amber)}.download.disabled{opacity:.45;pointer-events:none}
-.results{display:none}.results.visible{display:block}.quality{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px}.check{display:flex;gap:9px;padding:10px;border:1px solid #45505b;border-radius:8px;font-size:12px}.ok{color:var(--green)}.bad{color:var(--red)}.note{border-left:3px solid var(--amber);background:#302d28;padding:12px 13px;border-radius:0 8px 8px 0;font-size:12px;line-height:1.6;color:#e7d7c5}.hide{display:none}.footer{padding:18px 2px;color:var(--soft);font-size:11px}.spinner{display:none;margin-right:7px;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}audio{width:100%;margin:12px 0}
+.results{display:none}.results.visible{display:block}.quality{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px}.check{display:flex;gap:9px;padding:10px;border:1px solid #45505b;border-radius:8px;font-size:12px}.ok{color:var(--green)}.bad{color:var(--red)}.lyrics-preview{white-space:pre-wrap;max-height:240px;overflow:auto;color:var(--ink);line-height:1.65;background:#252b34;border-radius:8px;padding:14px;font-size:12px}.note{border-left:3px solid var(--amber);background:#302d28;padding:12px 13px;border-radius:0 8px 8px 0;font-size:12px;line-height:1.6;color:#e7d7c5}.hide{display:none}.footer{padding:18px 2px;color:var(--soft);font-size:11px}.spinner{display:none;margin-right:7px;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}audio{width:100%;margin:12px 0}
 @media(max-width:980px){.layout{grid-template-columns:1fr}.shell{padding:15px}.top{gap:12px}}@media(max-width:520px){.grid3{grid-template-columns:1fr 1fr}.outputs{grid-template-columns:1fr 1fr}.card{padding:15px}}
 </style></head><body><div class="shell">
 <header class="top"><div class="brand"><div class="logo">♬</div><div><span class="eyebrow">AI COMPOSITION WORKSTATION · v0.1</span><h1>Pocket Orchestra</h1></div></div><div class="status"><span id="statusDot" class="dot"></span><span id="serverStatus">Проверка движка...</span></div></header>
@@ -43,7 +43,19 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <div class="field"><label for="title">Название произведения</label><input id="title" value="Свет за горизонтом" maxlength="100"></div>
 <div class="field"><label for="prompt">Описание настроения, развития и звучания</label><textarea id="prompt" maxlength="4000">Тревожное начало на виолончелях; постепенно вступают деревянные духовые, развивается надежда. Затем величественная кульминация с валторнами и трубами, в конце светлая тихая кода.</textarea><div class="hint">Режим Ollama позволяет LLM предложить гармонию и мотив. Без Ollama работает автономный композитор с заданной музыкальной формой.</div></div>
 <div class="grid2"><div class="field"><label for="ensemble">Состав</label><select id="ensemble"><option value="orchestra" selected>Симфонический оркестр</option><option value="quartet">Струнный квартет</option><option value="choir">Нотный хор SATB (Ahh/Ooh/Mmm)</option><option value="orchestra_choir">Оркестр + SATB хор</option><option value="quartet_choir">Струнный квартет + SATB</option></select></div>
-<div class="field" id="choirVowelField"><label for="vowel">Гласная хора</label><select id="vowel"><option>Ahh</option><option>Ooh</option><option>Mmm</option></select></div></div><div class="hint" id="ensembleHelp" style="margin:-6px 0 14px"></div><div class="field" id="choirEntryField"><label for="choirEntry">Вступление хора</label><select id="choirEntry"><option value="-1">Авто — по промпту</option><option value="0">С самого начала</option><option value="0.25">После 25% пьесы</option><option value="0.5">После 50% пьесы</option><option value="0.75">После 75% пьесы</option></select></div></section>
+<div class="field" id="choirVowelField"><label for="vowel">Гласная хора</label><select id="vowel"><option>Ahh</option><option>Ooh</option><option>Mmm</option></select></div></div><div class="hint" id="ensembleHelp" style="margin:-6px 0 14px"></div><div class="field"><label for="style">Стиль музыки</label><select id="style">
+<option value="auto">Авто — по описанию</option>
+<option value="cinematic">Симфонический / кино</option>
+<option value="march">Торжественный марш</option>
+<option value="lyrical">Лирика / романс</option>
+<option value="folk">Народная мелодика</option>
+<option value="opera">Оперная фразировка (ноты, пока без певца)</option>
+<option value="ambient">Атмосферный / спокойный</option>
+</select><div class="hint">Стиль меняет мелодическую ритмику. Он не включает нейровокал автоматически.</div></div>
+<div class="field" id="lyricsField"><label for="lyrics">Текст песни (русский) — свой или автоматический черновик</label>
+<textarea id="lyrics" maxlength="4000" placeholder="Оставь пустым для автоматического черновика. Или впиши свои стихи здесь…"></textarea>
+<div class="hint">Текст сохраняется в lyrics.txt и частично в нотах MusicXML. Черновой WAV по-прежнему без произнесения слов.</div></div>
+<div class="field" id="choirEntryField"><label for="choirEntry">Вступление хора</label><select id="choirEntry"><option value="-1">Авто — по промпту</option><option value="0">С самого начала</option><option value="0.25">После 25% пьесы</option><option value="0.5">После 50% пьесы</option><option value="0.75">После 75% пьесы</option></select></div></section>
 <section class="card"><h2>02 · Музыкальная форма</h2>
 <div class="grid3"><div class="field"><label for="key">Тональность</label><select id="key"><option>C</option><option>C#</option><option selected>D</option><option>Eb</option><option>E</option><option>F</option><option>F#</option><option>G</option><option>Ab</option><option>A</option><option>Bb</option><option>B</option></select></div>
 <div class="field"><label for="mode">Лад</label><select id="mode"><option value="minor">Минор</option><option value="major">Мажор</option></select></div>
@@ -60,7 +72,8 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <div class="grid2"><div class="field"><label for="seed">Seed — повторяемый результат</label><input id="seed" type="number" min="0" max="4294967295" value="42"></div><div class="field" id="modelField"><label for="model">Локальная модель Ollama</label><input id="model" value="qwen3:8b"></div></div>
 <div class="checkbox"><input type="checkbox" id="useOllama"><label for="useOllama">Подключить Ollama для вариантов гармонии и мелодии (необязательно)</label></div><p class="hint" id="llmHelp">LLM выключена: Python создаёт ноты сам. Для первого теста она не нужна.</p>
 <div class="checkbox"><input type="checkbox" id="render" checked><label for="render">Создать черновой WAV, если FluidSynth установлен</label></div>
-<button id="go" class="primary">✦ Сочинить и оркестровать</button><button id="reroll" class="secondary" style="width:100%;margin-top:10px">↻ Новая вариация (другой seed)</button><p class="hint" id="working"></p></section>
+<button id="go" class="primary">✦ Сочинить и оркестровать</button><button id="reroll" class="secondary" style="width:100%;margin-top:10px">↻ Новая вариация (другой seed)</button><button id="resetSettings" class="secondary" style="width:100%;margin-top:10px">Сбросить сохранённые настройки</button>
+<p class="hint" id="saveStatus">Настройки автоматически сохраняются в этом браузере при изменении.</p><p class="hint" id="working"></p></section>
 </div><div class="right">
 <section class="card" id="monitorCard"><div class="sectionhead"><h2>Мониторинг Huananzhi CORE .100</h2><span class="pill" id="monStatus">Подключение…</span></div>
 <div class="monitor-grid">
@@ -81,6 +94,10 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <div style="margin-top:17px"><h3>Инструментальные партии <span id="partCount" class="muted"></span></h3><div id="parts" class="parts"><span class="muted">Партии появятся после генерации.</span></div></div></section>
 <section class="card results" id="resultCard"><h2>Файлы произведения</h2><div id="llmInfo" class="note"></div><div id="renderInfo" class="muted" style="margin-top:12px"></div><div id="audio"></div>
 <div class="outputs"><a id="xmlLink" class="download disabled">♬ MusicXML</a><a id="midiLink" class="download disabled">♫ MIDI</a><a id="reportLink" class="download disabled">≡ Отчёт JSON</a></div><div class="outputs" id="layerLinks" style="margin-top:10px"></div>
+<div id="lyricsResult" class="hide" style="margin-top:15px">
+<h3>Слова песни — редактируемый черновик</h3><pre class="lyrics-preview" id="lyricsText"></pre>
+<a class="download" id="lyricsLink">Скачать lyrics.txt</a>
+<p class="hint">Воспроизведение WAV пока НЕ произносит текст; для настоящего русского вокала нужна отдельная модель.</p></div>
 <p class="hint">MusicXML открой на Windows .103 в MuseScore Studio 4 с MuseSounds Core. Там же экспортируй качественный WAV. Быстрый WAV здесь — только черновой. SATB в этой версии поёт гласные, а не русский текст.</p></section>
 <section class="card results" id="qualityCard"><div class="sectionhead"><h2>Контроль музыкальной структуры</h2><span id="passCount" class="pill"></span></div><div class="quality" id="checks"></div><div class="info"><span>Всего нот: <strong id="noteCount"></strong></span><span>Опорные созвучия: <strong id="chordRatio"></strong></span><span>Скачки > октавы: <strong id="leapRatio"></strong></span></div><div id="warnings" class="hint"></div><p class="note">Эти проверки находят технические ошибки, но не доказывают музыкальную выразительность. Художественное качество оценивают по прослушиванию финального WAV.</p></section>
 <section class="card" id="serviceCard">
@@ -110,7 +127,7 @@ function selectCreationMode(){
   preview();
 }
 
-function config(){return {title:$('title').value,prompt:$('prompt').value,ensemble:$('ensemble').value,key:$('key').value,mode:$('mode').value,tempo:+$('tempo').value,bars:+$('bars').value,density:+$('density').value/100,tension:+$('tension').value/100,expression:+$('expression').value/100,humanize:+$('humanize').value/100,brass_level:+$('brass').value/100,choir_entry:+$('choirEntry').value,climax:+$('climax').value/100,seed:+$('seed').value,choir_vowel:$('vowel').value,use_ollama:$('useOllama').checked,model:$('model').value};}
+function config(){return {title:$('title').value,prompt:$('prompt').value,ensemble:$('ensemble').value,key:$('key').value,mode:$('mode').value,tempo:+$('tempo').value,bars:+$('bars').value,density:+$('density').value/100,tension:+$('tension').value/100,expression:+$('expression').value/100,humanize:+$('humanize').value/100,brass_level:+$('brass').value/100,choir_entry:+$('choirEntry').value,climax:+$('climax').value/100,seed:+$('seed').value,choir_vowel:$('vowel').value,use_ollama:$('useOllama').checked,model:$('model').value,style:$('style').value,lyrics:$('lyrics').value};}
 function renderTimeline(bars){const c=$('timeline');c.replaceChildren();for(let i=0;i<bars;i++){const el=document.createElement('div');el.className='bar '+['a','b','c','d'][Math.floor(i/4)%4];el.title='Такт '+(i+1)+' · '+['A','A′','B','A″'][Math.floor(i/4)%4];c.append(el)}}
 const ensembleDescriptions={
 orchestra:'12 инструментальных партий. Без хора и вокала. WAV — черновой FluidSynth.',
@@ -122,15 +139,48 @@ quartet_choir:'4 струнные партии + 4 партии SATB. Экспо
 function preview(){let c=config();const hasChoir=['choir','orchestra_choir','quartet_choir'].includes(c.ensemble);const hasBrass=['orchestra','orchestra_choir'].includes(c.ensemble);
 $('choirVowelField').classList.toggle('hide',!hasChoir);
 $('choirEntryField').classList.toggle('hide',!hasChoir);
+$('lyricsField').classList.toggle('hide',!hasChoir);
 $('brassField').classList.toggle('hide',!hasBrass);
 $('modelField').classList.toggle('hide',!c.use_ollama);
 $('ensembleHelp').textContent=ensembleDescriptions[c.ensemble];
 $('llmHelp').textContent=c.use_ollama?'Ollama должна работать на CORE: 127.0.0.1:11434, модель '+c.model+'. Она предлагает только мотив и гармонию; при ошибке применяется обычный композитор.':'LLM выключена: Python создаёт музыку сам. Для первого теста она не нужна.';
 for(const name of vals){$(name+'Value').textContent=name==='tempo'?c.tempo+' BPM':Math.round((name==='brass'?c.brass_level:c[name])*100)+'%'}$('duration').textContent=Math.round(c.bars*4*60/c.tempo)+' сек.';$('pieceTitle').textContent=c.title;$('pieceCaption').textContent=c.key+' '+c.mode+' · '+c.tempo+' BPM · '+c.bars+' тактов · '+{orchestra:'Оркестр',quartet:'Струнный квартет',quartet_choir:'Струнный квартет + SATB',choir:'Вокальный SATB',orchestra_choir:'Оркестр и SATB'}[c.ensemble];renderTimeline(c.bars)}
-for(const key of [...vals,'title','key','mode','bars','choirEntry','useOllama','model']) $(key).addEventListener('input',preview);
+for(const key of [...vals,'title','key','mode','bars','choirEntry','useOllama','model','style','lyrics']) $(key).addEventListener('input',preview);
 $('ensemble').addEventListener('change',preview);
 $('creationMode').addEventListener('change',selectCreationMode);
+// Browser-only persistence. No settings are uploaded except on Generate.
+const SETTINGS_KEY='pocket-orchestra-settings-v2';
+const formFields=[...document.querySelectorAll('.left input[id],.left select[id],.left textarea[id]')];
+function saveSettings(){
+  const values={};
+  for(const el of formFields)values[el.id]=el.type==='checkbox'?el.checked:el.value;
+  try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(values));$('saveStatus').textContent='Настройки сохранены в этом браузере.';}
+  catch(error){$('saveStatus').textContent='Браузер запретил сохранение: '+error.message;}
+}
+function restoreSettings(){
+  try{
+    const values=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');
+    if(!values||typeof values!=='object')return;
+    for(const el of formFields){
+      const val=values[el.id];
+      if(val===undefined)continue;
+      if(el.type==='checkbox'){if(typeof val==='boolean')el.checked=val;}
+      else if(el.tagName==='SELECT'){
+        if([...el.options].some(option=>option.value===String(val)))el.value=String(val);
+      }else if(typeof val==='string'&&val.length<=Number(el.maxLength>0?el.maxLength:10000)){
+        el.value=val;
+      }
+    }
+  }catch(error){$('saveStatus').textContent='Не удалось прочитать настройки: '+error.message;}
+}
+restoreSettings();
 selectCreationMode();
+for(const el of formFields){el.addEventListener('input',saveSettings);el.addEventListener('change',saveSettings);}
+$('resetSettings').addEventListener('click',()=>{
+  if(!window.confirm('Сбросить все поля до исходных настроек?'))return;
+  try{localStorage.removeItem(SETTINGS_KEY);}catch{}
+  window.location.reload();
+});
 async function ping(){try{const r=await fetch('/api/health');if(!r.ok)throw Error();const d=await r.json();$('statusDot').classList.add('up');$('serverStatus').textContent='CORE .100 · '+(d.renderer?'черновой рендер доступен':'только партитуры / MIDI')}catch{$('serverStatus').textContent='Нет соединения с сервером'}}ping();
 // Live status intentionally does not depend on an active musical job.
 let monitorBusy=false;
@@ -185,8 +235,14 @@ setInterval(pollMonitor,3000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollMonitor()});
 
 function link(id,url){const e=$(id);e.href=url;e.classList.remove('disabled');e.setAttribute('download','')}
-$('reroll').addEventListener('click',()=>{$('seed').value=(Number($('seed').value)+1)%4294967296;$('go').click()});
-$('go').addEventListener('click',async()=>{const btn=$('go');btn.disabled=true;btn.textContent='Композитор работает...';$('working').textContent='Формируем темы, гармонию, партии, проверяем диапазоны и создаём файлы.';try{const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:config(),render_preview:$('render').checked})});const d=await r.json();if(!r.ok)throw Error(typeof d.detail==='string'?d.detail:JSON.stringify(d.detail));lastJob=d.job_id;$('resultCard').classList.add('visible');$('qualityCard').classList.add('visible');$('llmInfo').textContent=d.llm;$('renderInfo').textContent=d.render;$('currentState').textContent='Партитура готова';let partNames=Object.entries(d.composition.parts);$('partCount').textContent=partNames.length+' шт.';$('parts').replaceChildren();for(const [id,count] of partNames){const div=document.createElement('div');div.className='part';const n=document.createElement('span');n.textContent=names[id]||id;const v=document.createElement('b');v.textContent=count+' нот';div.append(n,v);$('parts').append(div)}link('xmlLink',d.urls.musicxml);link('midiLink',d.urls.midi);link('reportLink',d.urls.report);$('layerLinks').replaceChildren();for(const [kind,label] of [['choir.musicxml','Хор · MusicXML'],['choir.mid','Хор · MIDI'],['orchestra.musicxml','Оркестр · MusicXML'],['orchestra.mid','Оркестр · MIDI'],['quartet.musicxml','Квартет · MusicXML'],['quartet.mid','Квартет · MIDI']]){if(d.urls[kind]){const a=document.createElement('a');a.className='download';a.href=d.urls[kind];a.setAttribute('download','');a.textContent=label;$('layerLinks').append(a)}}$('audio').replaceChildren();if(d.urls.wav){const a=document.createElement('audio');a.controls=true;a.preload='none';a.src=d.urls.wav;$('audio').append(a)}$('checks').replaceChildren();for(const x of d.quality.checks){const el=document.createElement('div');el.className='check';const ico=document.createElement('strong');ico.className=x.ok?'ok':'bad';ico.textContent=x.ok?'✓':'!';const caption=document.createElement('span');caption.textContent=x.description;el.append(ico,caption);$('checks').append(el)}$('passCount').textContent=d.quality.passed+'/'+d.quality.total+' проверок';$('noteCount').textContent=d.quality.statistics.notes;$('chordRatio').textContent=Math.round(d.quality.statistics.strong_beat_chord_ratio*100)+'%';$('leapRatio').textContent=Math.round(d.quality.statistics.leap_rate*100)+'%';$('warnings').textContent=d.quality.warnings.join(' · ');$('working').textContent='Готово. Скачай партитуру и открой в MuseScore Studio на GRAPHICS .103.';}catch(e){$('working').textContent='Ошибка: '+e.message;$('currentState').textContent='Ошибка генерации';}finally{btn.disabled=false;btn.textContent='✦ Сочинить и оркестровать'}});
+$('reroll').addEventListener('click',()=>{$('seed').value=(Number($('seed').value)+1)%4294967296;saveSettings();$('go').click()});
+$('go').addEventListener('click',async()=>{const btn=$('go');btn.disabled=true;btn.textContent='Композитор работает...';$('working').textContent='Формируем темы, гармонию, партии, проверяем диапазоны и создаём файлы.';try{const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:config(),render_preview:$('render').checked})});const d=await r.json();if(!r.ok)throw Error(typeof d.detail==='string'?d.detail:JSON.stringify(d.detail));lastJob=d.job_id;$('resultCard').classList.add('visible');$('qualityCard').classList.add('visible');$('llmInfo').textContent=d.llm;$('renderInfo').textContent=d.render;$('currentState').textContent='Партитура готова';let partNames=Object.entries(d.composition.parts);$('partCount').textContent=partNames.length+' шт.';$('parts').replaceChildren();for(const [id,count] of partNames){const div=document.createElement('div');div.className='part';const n=document.createElement('span');n.textContent=names[id]||id;const v=document.createElement('b');v.textContent=count+' нот';div.append(n,v);$('parts').append(div)}link('xmlLink',d.urls.musicxml);link('midiLink',d.urls.midi);link('reportLink',d.urls.report);
+$('lyricsResult').classList.toggle('hide',!d.urls['lyrics.txt']);
+if(d.urls['lyrics.txt']){
+  $('lyricsText').textContent=d.lyrics||'';
+  link('lyricsLink',d.urls['lyrics.txt']);
+}
+$('layerLinks').replaceChildren();for(const [kind,label] of [['choir.musicxml','Хор · MusicXML'],['choir.mid','Хор · MIDI'],['orchestra.musicxml','Оркестр · MusicXML'],['orchestra.mid','Оркестр · MIDI'],['quartet.musicxml','Квартет · MusicXML'],['quartet.mid','Квартет · MIDI']]){if(d.urls[kind]){const a=document.createElement('a');a.className='download';a.href=d.urls[kind];a.setAttribute('download','');a.textContent=label;$('layerLinks').append(a)}}$('audio').replaceChildren();if(d.urls.wav){const a=document.createElement('audio');a.controls=true;a.preload='none';a.src=d.urls.wav;$('audio').append(a)}$('checks').replaceChildren();for(const x of d.quality.checks){const el=document.createElement('div');el.className='check';const ico=document.createElement('strong');ico.className=x.ok?'ok':'bad';ico.textContent=x.ok?'✓':'!';const caption=document.createElement('span');caption.textContent=x.description;el.append(ico,caption);$('checks').append(el)}$('passCount').textContent=d.quality.passed+'/'+d.quality.total+' проверок';$('noteCount').textContent=d.quality.statistics.notes;$('chordRatio').textContent=Math.round(d.quality.statistics.strong_beat_chord_ratio*100)+'%';$('leapRatio').textContent=Math.round(d.quality.statistics.leap_rate*100)+'%';$('warnings').textContent=d.quality.warnings.join(' · ');$('working').textContent='Готово. Скачай партитуру и открой в MuseScore Studio на GRAPHICS .103.';}catch(e){$('working').textContent='Ошибка: '+e.message;$('currentState').textContent='Ошибка генерации';}finally{btn.disabled=false;btn.textContent='✦ Сочинить и оркестровать'}});
 
 $('stopCore').addEventListener('click',async()=>{
   const out=$('stopResult');
