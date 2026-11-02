@@ -39,3 +39,31 @@ motif: ровно 4 целых интервала по ступеням -4..7.
     proposal["comment"] = str(proposal.get("comment", ""))[:600]
     proposal["source"] = f"ollama:{cfg.model}"
     return proposal
+
+
+def generate_lyrics(cfg: Config, endpoint: str = "http://127.0.0.1:11434/api/generate") -> str:
+    """Optional original Russian lyric text by local Ollama, not voice synthesis."""
+    prompt = f"""Сочини СВОЙ оригинальный текст песни на русском языке для музыки.
+Название: {cfg.title}. Стиль: {cfg.style}. Тема: {cfg.prompt}.
+Нужно 3 коротких куплета по 4 строки; образность, развитие, выразительный припев,
+хорошая ритмика, простые произносимые слова, без известных цитат.
+Ответь ТОЛЬКО JSON-объектом вида {{"lyrics":"[Куплет 1]\\n...\\n[Припев]\\n..."}}.
+Не описывай процесс и не пиши английские пояснения."""
+    body = json.dumps({
+        "model": cfg.model, "prompt": prompt, "stream": False,
+        "format": "json", "options": {"temperature": .75, "num_predict": 700},
+    }).encode("utf-8")
+    request = urllib.request.Request(
+        endpoint, data=body, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=90) as response:
+            data = json.loads(response.read(1024 * 1024))
+        result = json.loads(data["response"])
+        lyrics = result["lyrics"]
+    except (URLError, HTTPError, TimeoutError, OSError, KeyError, ValueError,
+            json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Нейросеть не подготовила текст: {type(exc).__name__}") from exc
+    if not isinstance(lyrics, str) or not 24 <= len(lyrics.strip()) <= 4000:
+        raise ValueError("Ожидался непустой оригинальный текст песни до 4000 символов")
+    return lyrics.strip()
