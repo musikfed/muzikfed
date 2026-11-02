@@ -7,7 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass, asdict, fields
 import hashlib
 from random import Random
-from .theory import TONICS, SCALES, INSTRUMENTS, ORCHESTRA, STRING_QUARTET, CHOIR, chord_pcs, note_in_range
+from .theory import TONICS, SCALES, INSTRUMENTS, ORCHESTRA, STRING_QUARTET, CHOIR, CHIPTUNE, SYNTHWAVE, chord_pcs, note_in_range
 
 
 @dataclass
@@ -38,7 +38,7 @@ class Config:
     def __post_init__(self):
         if not (1 <= len(self.title) <= 100 and len(self.prompt) <= 4000):
             raise ValueError("Название (1–100) или промпт (до 4000 символов) некорректны")
-        if self.ensemble not in ("orchestra", "quartet", "choir", "orchestra_choir", "quartet_choir"):
+        if self.ensemble not in ("orchestra", "quartet", "choir", "orchestra_choir", "quartet_choir", "chiptune", "synthwave"):
             raise ValueError("Неизвестный состав ансамбля")
         if self.key not in TONICS or self.mode not in SCALES:
             raise ValueError("Неизвестная тональность/лад")
@@ -46,7 +46,7 @@ class Config:
             type(self.bars) is int and 8 <= self.bars <= 512 and self.bars % 4 == 0
         ):
             raise ValueError("Темп 45–190, тактов: кратно 4 от 8 до 512")
-        if type(self.ai_duration) is not int or self.ai_duration not in (0, 60, 120, 180, 300, 480, 600):
+        if type(self.ai_duration) is not int or self.ai_duration not in (0, 20, 60, 120, 180, 300, 480, 600):
             raise ValueError("Длительность AI: по партитуре, 1, 2, 3, 5, 8 или 10 минут")
         for name in ("density", "tension", "expression", "humanize", "brass_level", "climax"):
             if not (0 <= float(getattr(self, name)) <= 1):
@@ -57,7 +57,7 @@ class Config:
             raise ValueError("Допустимые гласные: Ahh, Ooh, Mmm")
         if not (0 <= self.seed < 2**32):
             raise ValueError("seed вне диапазона")
-        if self.style not in ("auto", "cinematic", "march", "lyrical", "folk", "opera", "ambient"):
+        if self.style not in ("auto", "cinematic", "march", "lyrical", "folk", "opera", "ambient", "chiptune", "synthwave"):
             raise ValueError("Неизвестный музыкальный стиль")
         if self.score_engine not in ("rules", "ai_polyphony"):
             raise ValueError("Неизвестный движок партитуры")
@@ -101,7 +101,8 @@ class Piece:
 
 def instrumentation(ensemble: str) -> tuple[str, ...]:
     return {"quartet": STRING_QUARTET, "choir": CHOIR, "orchestra": ORCHESTRA,
-            "orchestra_choir": ORCHESTRA + CHOIR, "quartet_choir": STRING_QUARTET + CHOIR}[ensemble]
+            "orchestra_choir": ORCHESTRA + CHOIR, "quartet_choir": STRING_QUARTET + CHOIR,
+            "chiptune": CHIPTUNE, "synthwave": SYNTHWAVE}[ensemble]
 
 
 def _near_degree(cfg: Config, degree: int, target: int, instr: str) -> int:
@@ -135,8 +136,12 @@ def _stable_seed(cfg: Config) -> int:
 def _style(cfg: Config) -> str:
     if cfg.style != "auto":
         return cfg.style
+    if cfg.ensemble in ("chiptune", "synthwave"):
+        return cfg.ensemble
     text = (cfg.prompt + " " + cfg.title).casefold()
     for name, words in (
+        ("chiptune", ("денди", "dendy", "нес", "nes ", "8-bit", "8 бит", "чиптюн", "chiptune", "ретро игр")),
+        ("synthwave", ("синтвейв", "synthwave", "синтезатор", "электронн", "cyberpunk", "киберпанк", "retrowave")),
         ("march", ("марш", "шеств", "парад", "march")),
         ("opera", ("опер", "ария", "тенор", "сопрано", "opera")),
         ("folk", ("народн", "фольклор", "folk")),
@@ -206,7 +211,9 @@ def compose(cfg: Config, plan: dict | None = None) -> Piece:
         proposal = plan["motif"]
         if len(proposal) == 4 and all(type(x) is int and -4 <= x <= 7 for x in proposal):
             motif = proposal
-    primary_voice = "violin_1" if "violin_1" in keys else "soprano"
+    primary_voice = ("chip_lead" if "chip_lead" in keys else
+                     "synth_lead" if "synth_lead" in keys else
+                     "violin_1" if "violin_1" in keys else "soprano")
     previous = {k: (INSTRUMENTS[k].low + INSTRUMENTS[k].high) // 2 for k in keys}
 
     def add(key: str, bar: int, offset: float, length: float, degree: int,
@@ -236,6 +243,13 @@ def compose(cfg: Config, plan: dict | None = None) -> Piece:
             variant = [4, 2, 1, 0]
         if bar == cfg.bars - 1:
             variant = [4, 2, 0, 0]
+        elif bar // 16 > 0:
+            # Long pieces develop motifs instead of repeating the exact same 16 bars.
+            cycle = bar // 16
+            variant = [max(-3, min(8, n + (cycle % 3 - 1 if (bar // 4) % 2 else 0)))
+                       for n in variant]
+            if bar % 4 == 2:
+                variant = variant[1:] + variant[:1]
         elif bar % 4 in (1, 2) and rng.random() < .45:
             index = rng.choice((1, 3))
             variant[index] = max(-2, min(5, variant[index] + rng.choice((-1, 1))))
@@ -243,6 +257,9 @@ def compose(cfg: Config, plan: dict | None = None) -> Piece:
         lead = "cello" if (intent["cello_intro"] and bar < 4 and "cello" in keys) else primary_voice
         # Melodic rhythm uses an intentionally recognizable bar shape.
         rhythms = {
+            "chiptune": ((.5, .5, .5, .5, .5, .5, .5, .5),
+                         (1, .5, .5, 1, .5, .5), (.5, .5, 1, .5, .5, 1)),
+            "synthwave": ((1, 1, 1, 1), (.5, .5, 1, 1, 1), (1.5, .5, 1, 1)),
             "march": ((1, 1, 1, 1), (1.5, .5, 1, 1)),
             "opera": ((2, 1, 1), (1.5, .5, 2), (1, 1, 2)),
             "lyrical": ((2, 1, 1), (1, 1, 2), (1.5, .5, 2)),
@@ -255,14 +272,35 @@ def compose(cfg: Config, plan: dict | None = None) -> Piece:
             durations = rng.choice(((2, 1, 1), (2, 2)))
         start = 0.0
         for i, dur in enumerate(durations):
-            degree = chord + variant[min(i, 3)]
+            degree = chord + variant[i % len(variant)]
             if i == 0:
                 degree = chord + 4  # a chord tone on the downbeat
             add(lead, bar, start, dur, degree,
-                56 if lead == "cello" else 76 if lead == "violin_1" else 71,
+                56 if lead == "cello" else 78 if lead in ("chip_lead", "synth_lead") else 76 if lead == "violin_1" else 71,
                 "tenuto" if dur >= 2 else "", cfg.choir_vowel if lead in CHOIR else "")
             start += dur
 
+        # Four independent General MIDI tracks for classic game-console colour.
+        # This is an approximation on a GM SoundFont, NOT hardware-accurate NES synthesis.
+        if "chip_counter" in keys:
+            for off, degree in ((0, chord + 2), (1, chord + 3), (2, chord + 4), (3, chord + 2)):
+                add("chip_counter", bar, off, 1, degree, 70, "staccato")
+        if "chip_arp" in keys:
+            tones = (0, 2, 4, 2, 0, 2, 5, 4) if section != "B" else (4, 2, 0, 2, 5, 4, 2, 0)
+            for i, tone in enumerate(tones):
+                add("chip_arp", bar, i * .5, .5, chord + tone, 83, "staccato")
+        if "chip_bass" in keys:
+            for off, degree in ((0, chord), (1.5, chord + 4), (2, chord), (3.5, chord + 4)):
+                add("chip_bass", bar, off, .5, degree, 43, "staccato")
+        if "synth_pad" in keys:
+            add("synth_pad", bar, 0, 2, chord + 2, 61, "legato")
+            add("synth_pad", bar, 2, 2, chord + 4, 62, "legato")
+        if "synth_arp" in keys:
+            for i, tone in enumerate((0, 2, 4, 2, 5, 4, 2, 4)):
+                add("synth_arp", bar, i * .5, .5, chord + tone, 80, "staccato")
+        if "synth_bass" in keys:
+            for off, degree in ((0, chord), (2, chord + 4)):
+                add("synth_bass", bar, off, 2, degree, 44, "tenuto")
         if "violin_2" in keys:
             for off, degree in ((0, chord + 2), (2, chord + 1)):
                 add("violin_2", bar, off, 2, degree, 69, "legato")
@@ -306,6 +344,7 @@ def compose(cfg: Config, plan: dict | None = None) -> Piece:
 
     result_plan = dict(plan) if plan else {"source": "rule_based", "notes": "Recurrent motif, diatonic harmony, contrasting B section, cadential tonic"}
     result_plan["prompt_cues"] = intent
+    result_plan["sound_design"] = "General MIDI approximation; no authentic NES pulse/noise chip emulator" if style == "chiptune" else "General MIDI synth patch orchestration" if style == "synthwave" else "traditional score"
     result_plan["resolved_style"] = style
     result_plan["melodic_motif"] = motif
     result_plan["contrast_motif"] = contrast
