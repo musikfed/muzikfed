@@ -28,6 +28,9 @@ if command -v findmnt >/dev/null; then
 fi
 if [[ ! -w "/1tbdisk" && ! -w "$DEST" ]]; then
   echo "ERROR: user cannot write to /1tbdisk or $DEST. Check ownership/permissions." >&2
+  echo "If $DEST does not exist, run ON CORE as your normal SSH user:" >&2
+  echo '  sudo install -d -o "$(id -un)" -g "$(id -gn)" -m 755 /1tbdisk/muzikfed' >&2
+  echo 'Do not chown/chmod the whole /1tbdisk or use sudo git clone.' >&2
   exit 1
 fi
 command -v git >/dev/null || { echo 'Please install git first: sudo apt install git'; exit 1; }
