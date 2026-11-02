@@ -164,7 +164,7 @@ def generate(payload: GenerateRequest):
                         lyric_mode = f"ollama:{cfg.model}"
                         llm_message += "; оригинальные русские стихи написаны LLM"
                     except (RuntimeError, ValueError) as exc:
-                            raise HTTPException(
+                        raise HTTPException(
                             503, f"Оllama не сочинила стихов. Впиши свой текст или проверь Ollama: {str(exc)[:150]}"
                         ) from exc
                 if lyrics_text:
