@@ -1,7 +1,7 @@
 """The three UI production groups map only to ensembles implemented in v0.1.
 
-Voice and voice+orchestra are explicitly labelled as wordless SATB demos; never
-present these as already completed Russian singing synthesis.
+Voice and voice+orchestra are still SATB notation with optional lyrics; do not
+claim SF2 preview audio articulates Russian words. ACE-Step is separately optional.
 """
 from pathlib import Path
 
@@ -19,9 +19,11 @@ def test_creation_mode_choices_and_group_mapping():
 
 
 def test_no_misleading_lyric_claim_in_ui():
-    assert "Это НЕ сольный певец и НЕ разборчивые слова на русском" in WEB
-    assert "Русское пение и отдельные вокальные WAV-дорожки пока не реализованы" in WEB
-    assert "Настоящий вокальный движок ещё предстоит подключить" in WEB
+    assert "Черновой WAV ещё не поёт русский текст" in WEB
+    assert "синхронизированных отдельных вокальных WAV-стемов пока нет" in WEB
+    assert "Если отдельно подключена ACE-Step" in WEB
+    assert "FluidSynth не произносит русский текст" in WEB
+    assert 'id="aceGenerate"' in WEB
 
 
 def test_first_run_defaults_to_orchestra_without_ollama():
