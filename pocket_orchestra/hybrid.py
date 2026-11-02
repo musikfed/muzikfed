@@ -58,7 +58,7 @@ def build_payload(job_dir: Path, mode: str = "original") -> tuple[dict, str]:
     payload = {
         "prompt": caption, "lyrics": lyrics if is_voice else "[Instrumental]",
         "vocal_language": "ru" if is_voice else "en",
-        "audio_format": "wav", "audio_duration": seconds,
+        "audio_format": "mp3", "audio_duration": seconds,
         "bpm": int(cfg["tempo"]),
         "key_scale": f"{cfg.get('key', 'D')} {'minor' if cfg.get('mode', 'minor') == 'minor' else 'major'}",
         "time_signature": "4", "thinking": seconds <= 480 and mode == "original",
