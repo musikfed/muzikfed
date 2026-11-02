@@ -42,7 +42,17 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <div class="field"><label for="creationMode">01a · Режим создания</label><select id="creationMode"><option value="instrumental">🎻 Только инструменты</option><option value="vocal">🎤 Только голос: MIDI-хор или AI-певец</option><option value="combined">🎼 Инструменты + вокал: MIDI или AI</option></select><div class="note" id="creationModeInfo" style="margin-top:10px">Инструментальный режим: партитура, MIDI и черновой WAV. Без вокала.</div></div>
 <div class="field"><label for="title">Название произведения</label><input id="title" value="Свет за горизонтом" maxlength="100"></div>
 <div class="field"><label for="prompt">Описание настроения, развития и звучания</label><textarea id="prompt" maxlength="4000">Тревожное начало на виолончелях; постепенно вступают деревянные духовые, развивается надежда. Затем величественная кульминация с валторнами и трубами, в конце светлая тихая кода.</textarea><div class="hint">Режим Ollama позволяет LLM предложить гармонию и мотив. Без Ollama работает автономный композитор с заданной музыкальной формой.</div></div>
-<div class="grid2"><div class="field"><label for="ensemble">Состав</label><select id="ensemble"><option value="orchestra" selected>Симфонический оркестр</option><option value="quartet">Струнный квартет</option><option value="choir">Нотный хор SATB (Ahh/Ooh/Mmm)</option><option value="orchestra_choir">Оркестр + SATB хор</option><option value="quartet_choir">Струнный квартет + SATB</option></select></div>
+<div class="field"><label for="promptPreset">Как писать промпт — примеры музыкального задания</label>
+<div class="grid2"><select id="promptPreset">
+<option value="orchestra">Сказочный оркестр · тема и кульминация</option>
+<option value="dendy">Dendy 8-bit · приключение и битва</option>
+<option value="synthwave">Synthwave · ночной город</option>
+<option value="lyrical">Лирическая песня · чистый голос</option>
+</select><button type="button" class="secondary" id="usePromptPreset">Вставить пример</button></div>
+<div class="hint">Структура: жанр → ведущие инструменты → характер темы → развитие A/B → кульминация → финал. Пример заменяет только название, описание, состав, стиль и темп; слова песни сохраняются.</div></div>
+<div class="grid2"><div class="field"><label for="ensemble">Состав</label><select id="ensemble"><option value="orchestra" selected>Симфонический оркестр</option><option value="quartet">Струнный квартет</option>
+<option value="chiptune">8-bit / Dendy — 4 MIDI-партии</option>
+<option value="synthwave">Synthwave — 4 MIDI-партии</option><option value="choir">Нотный хор SATB (Ahh/Ooh/Mmm)</option><option value="orchestra_choir">Оркестр + SATB хор</option><option value="quartet_choir">Струнный квартет + SATB</option></select></div>
 <div class="field" id="choirVowelField"><label for="vowel">Гласная хора</label><select id="vowel"><option>Ahh</option><option>Ooh</option><option>Mmm</option></select></div></div><div class="hint" id="ensembleHelp" style="margin:-6px 0 14px"></div><div class="field"><label for="scoreEngine">Движок сочинения нот</label>
 <select id="scoreEngine"><option value="rules">CPU: нотный алгоритм (без ИИ)</option>
 <option value="ai_polyphony">ИИ-полифонист Qwen / Ollama — реальные ноты двух голосов</option></select>
@@ -56,7 +66,9 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <option value="folk">Народная мелодика</option>
 <option value="opera">Оперная фразировка (ноты, пока без певца)</option>
 <option value="ambient">Атмосферный / спокойный</option>
-</select><div class="hint">Стиль меняет мелодическую ритмику. Он не включает нейровокал автоматически.</div></div>
+<option value="chiptune">8-bit / Dendy — игровая мелодия</option>
+<option value="synthwave">Synthwave / электронная музыка</option>
+</select><div class="hint">Стиль влияет на мелодию и оркестровку. Для настоящих 8-bit MIDI-партий выбери состав «8-bit / Dendy». Вокал создаётся отдельной кнопкой.</div></div>
 <div class="field" id="lyricsField"><label for="lyrics">Текст песни (русский) — свой, от Ollama или от ACE-Step</label>
 <textarea id="lyrics" maxlength="4000" placeholder="Впиши слова, либо оставь пустым: ACE-Step сочинит их по описанию; для MIDI-текста включи Ollama"></textarea>
 <div class="hint">Если вписаны стихи, они сохраняются в lyrics.txt и MusicXML. Если текст пуст, нейросеть ACE-Step сочинит слова из описания при запуске аудио; нотный WAV слов не произносит.</div></div>
@@ -118,8 +130,10 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <option value="600">10 минут (без музыкальной LM, свой текст песни)</option>
 </select>
 <div class="hint">Длительность AI-аудио не зависит от тактов MIDI. Для гибрида число тактов увеличится автоматически. На 12 ГБ 8 мин — предел с LM; 10 мин — без неё. Объём MP3 примерно 2 МБ/мин.</div></div>
+<button type="button" class="secondary" id="acePreview" disabled style="width:100%;margin-bottom:10px">▶ Проверочный AI-эскиз · 20 секунд MP3</button>
+<p class="hint">Проверка тембра, жанра и русского произношения. Это отдельная генерация, не первые 20 секунд будущего трека. Для эскиза RTX используется отдельно от Qwen.</p>
 <button type="button" class="primary" id="aceGenerate" disabled style="width:100%">🎤 Создать полноценную песню по промпту</button>
-<button type="button" class="secondary" id="aceHybrid" disabled style="width:100%;margin-top:10px">🎼 Гибрид: MIDI-аранжировка → нейросетевой WAV</button>
+<button type="button" class="secondary" id="aceHybrid" disabled style="width:100%;margin-top:10px">🎼 Гибрид: MIDI-аранжировка → нейросетевой MP3</button>
 <p class="hint">Первая кнопка — самостоятельный аудиогенератор, без обязательного предварительного MIDI. Вторая — сначала нотная партитура, затем ACE-Step cover. Результат cover может менять исходные ноты.</p>
 <p class="hint" id="aceMessage">Для нейропесен нужно один раз установить ACE-Step на CORE; далее она будет запускаться по нажатию кнопки.</p>
 <div id="aceOutput" class="hide"><audio id="aceAudio" controls preload="none"></audio><a id="aceLink" class="download" style="display:block">Скачать готовую песню MP3</a></div>
@@ -136,11 +150,11 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 </div></div><div class="footer">Pocket Orchestra · локальный движок MIDI и отдельная нейрогенерация через ACE-Step · веб-пульт: 192.168.0.100:9095 через LAN/VPN · без публичного проброса и авторизации.</div></div>
 <script>
 const $=id=>document.getElementById(id);let lastJob=null;
-const names={violin_1:'Скрипки I',violin_2:'Скрипки II',viola:'Альты',cello:'Виолончели',bass:'Контрабасы',flute:'Флейта',oboe:'Гобой',clarinet:'Кларнет',horn:'Валторны',trumpet:'Трубы',harp:'Арфа',timpani:'Литавры',soprano:'Хор — сопрано',alto:'Хор — альт',tenor:'Хор — тенор',choral_bass:'Хор — бас'};
+const names={violin_1:'Скрипки I',violin_2:'Скрипки II',viola:'Альты',cello:'Виолончели',bass:'Контрабасы',flute:'Флейта',oboe:'Гобой',clarinet:'Кларнет',horn:'Валторны',trumpet:'Трубы',harp:'Арфа',timpani:'Литавры',soprano:'Хор — сопрано',alto:'Хор — альт',tenor:'Хор — тенор',choral_bass:'Хор — бас',chip_lead:'8-bit · Лид',chip_counter:'8-bit · Второй голос',chip_arp:'8-bit · Арпеджио',chip_bass:'8-bit · Бас',synth_lead:'Synthwave · Лид',synth_pad:'Synthwave · Пэд',synth_arp:'Synthwave · Арпеджио',synth_bass:'Synthwave · Бас'};
 const vals=['tempo','climax','density','tension','expression','humanize','brass'];
 // UI groups existing score-engine ensembles, without pretending that the v0.1 choir sings Russian words.
 const creationModes={
-  instrumental:{ensembles:['orchestra','quartet'],first:'orchestra',help:'Только инструменты: 12-партийный оркестр или струнный квартет. MusicXML, MIDI, черновой WAV. Вокала нет.'},
+  instrumental:{ensembles:['orchestra','quartet','chiptune','synthwave'],first:'orchestra',help:'Только инструменты: 12-партийный оркестр или струнный квартет. MusicXML, MIDI, черновой WAV. Вокала нет.'},
   vocal:{ensembles:['choir'],first:'choir',help:'Режим вокала: кнопка партитуры создаёт SATB-ноты, а кнопка AI-песни запускает ACE-Step и создаёт звучащий вокал по словам. Пока ACE-Step не установлена, голосового WAV нет. Черновой WAV ещё не поёт русский текст.'},
   combined:{ensembles:['orchestra_choir','quartet_choir'],first:'orchestra_choir',help:'Инструменты + нотный хор SATB: общий MusicXML/MIDI и отдельные партии хора/инструментов. Для нейропесни по-русски можно отдельно подключить ACE-Step; синхронизированных отдельных вокальных WAV-стемов пока нет.'}
 };
@@ -155,8 +169,10 @@ function selectCreationMode(){
 function config(){return {title:$('title').value,prompt:$('prompt').value,ensemble:$('ensemble').value,key:$('key').value,mode:$('mode').value,tempo:+$('tempo').value,bars:+$('bars').value,density:+$('density').value/100,tension:+$('tension').value/100,expression:+$('expression').value/100,humanize:+$('humanize').value/100,brass_level:+$('brass').value/100,choir_entry:+$('choirEntry').value,climax:+$('climax').value/100,seed:+$('seed').value,choir_vowel:$('vowel').value,use_ollama:$('useOllama').checked,model:$('model').value,style:$('style').value,lyrics:$('lyrics').value,score_engine:$('scoreEngine').value,ai_duration:+$('aiDuration').value};}
 function renderTimeline(bars){const c=$('timeline');c.replaceChildren();for(let i=0;i<bars;i++){const el=document.createElement('div');el.className='bar '+['a','b','c','d'][Math.floor(i/4)%4];el.title='Такт '+(i+1)+' · '+['A','A′','B','A″'][Math.floor(i/4)%4];c.append(el)}}
 const ensembleDescriptions={
-orchestra:'12 инструментальных партий. Без хора и вокала. WAV — черновой FluidSynth.',
+orchestra:'12 инструментальных партий. Без хора и вокала. MP3 — проверка FluidSynth.',
 quartet:'4 струнные партии. Без хора и вокала.',
+chiptune:'8-bit / Dendy: лид, второй голос, арпеджио и бас. GM SoundFont имитирует ретро-чип, но не точно эмулирует NES.',
+synthwave:'Современные синтезаторы: лид, пэд, арпеджио, бас. Отдельные MIDI-партии для дальнейшего монтажа.',
 choir:'4 нотные партии SATB. Русские слова сохраняются отдельно и в MusicXML, но не произносятся в WAV FluidSynth.',
 orchestra_choir:'12 партий оркестра + 4 партии SATB. Экспорт раздельных MIDI/MusicXML для хора и оркестра.',
 quartet_choir:'4 струнные партии + 4 партии SATB. Экспорт раздельных MIDI/MusicXML.'
@@ -278,6 +294,7 @@ let aceAvailable=false, acePollTimer=null, aceBusy=false;
 function setAceButtons(busy){
   $('aceGenerate').disabled=busy||!aceAvailable;
   $('aceHybrid').disabled=busy||!aceAvailable;
+  $('acePreview').disabled=busy||!aceAvailable;
 }
 async function aceRefresh(){
   try{
@@ -294,19 +311,23 @@ async function aceRefresh(){
 aceRefresh();
 async function createAiSong(mode){
   if(!aceAvailable||aceBusy)return;
-  if(!window.confirm(mode==='guided'?'Создать MIDI и переработать его нейросетью? Мелодия может измениться.':'Создать новую песню прямо по текущему промпту и тексту на RTX 3060?'))return;
+  if(mode!=='preview'&&!window.confirm(mode==='guided'?'Создать MIDI и переработать его нейросетью? Мелодия может измениться.':'Создать новую песню по текущему промпту и тексту на RTX 3060?'))return;
   aceBusy=true;setAceButtons(true);$('aceOutput').classList.add('hide');
   try{
     $('aceMessage').textContent=mode==='original'?'Передаём твой промпт напрямую аудиомодели...':'Сочиняем реальную MIDI-партитуру для гибрида...';
     // Original audio is directly text-to-song. Only hybrid requires score/MIDI first.
     const cfg=config();
+    if(mode==='preview'){
+      cfg.ai_duration=20;
+      $('aceMessage').textContent='Проверочный самостоятельный AI-эскиз: 20 секунд...';
+    }
     if(mode==='guided'&&cfg.ai_duration){
       const requiredBars=Math.max(8,Math.round(cfg.ai_duration*cfg.tempo/240/4)*4);
       if(requiredBars>512)throw Error('В выбранном темпе гибриду нужно '+requiredBars+' тактов (лимит 512). Уменьши темп или длительность.');
       cfg.bars=requiredBars;
       $('aceMessage').textContent='Гибрид: создаём '+requiredBars+' MIDI-тактов под '+cfg.ai_duration+' сек AI-звучания...';
     }
-    const endpoint=mode==='original'?'/api/audio/project':'/api/generate';
+    const endpoint=mode==='guided'?'/api/generate':'/api/audio/project';
     const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({config:cfg,render_preview:mode==='guided',guide_for_ai:mode==='guided'})});
     const d=await r.json();
@@ -315,7 +336,7 @@ async function createAiSong(mode){
     lastJob=job;
     $('aceMessage').textContent='Освобождаем RTX от Ollama, запускаем ACE-Step и загружаем модель при необходимости...';
     const sr=await fetch('/api/vocal/start',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({job_id:job,mode})});
+      body:JSON.stringify({job_id:job,mode:mode==='guided'?'guided':'original'})});
     const task=await sr.json();
     if(!sr.ok)throw Error(task.detail||'ACE-Step не приняла задачу');
     $('aceMessage').textContent=mode==='guided'?'Нейросеть улучшает звучание MIDI-ориентира...':'Нейросеть пишет новую песню по описанию и словам...';
@@ -326,7 +347,9 @@ async function createAiSong(mode){
         const v=await p.json();
         if(!p.ok)throw Error(v.detail||'Ошибка проверки аудио');
         if(v.state==='complete'&&v.mp3_url){
-          $('aceMessage').textContent='Готовый MP3! RTX освобождается. Качество оценивай по звучанию и дикции.';
+          $('aceMessage').textContent=mode==='preview'
+            ?'Готов MP3-эскиз 20 секунд. Если понравился, запускай полную песню — новая генерация может отличаться.'
+            :'Готовый MP3! RTX освобождается. Качество оценивай по звучанию и дикции.';
           $('aceAudio').src=v.mp3_url;
           $('aceLink').href=v.mp3_url;$('aceLink').setAttribute('download','neural_song.mp3');
           $('aceOutput').classList.remove('hide');
@@ -345,6 +368,7 @@ async function createAiSong(mode){
     aceBusy=false;setAceButtons(false);
   }
 }
+$('acePreview').addEventListener('click',()=>createAiSong('preview'));
 $('aceGenerate').addEventListener('click',()=>createAiSong('original'));
 $('aceHybrid').addEventListener('click',()=>createAiSong('guided'));
 
