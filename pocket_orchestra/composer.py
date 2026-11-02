@@ -33,6 +33,7 @@ class Config:
     style: str = "auto"
     lyrics: str = ""
     score_engine: str = "rules"  # rules or ai_polyphony (Ollama writes notes)
+    ai_duration: int = 0  # seconds for ACE-Step, 0 uses score length; independent from MIDI bars
 
     def __post_init__(self):
         if not (1 <= len(self.title) <= 100 and len(self.prompt) <= 4000):
@@ -41,8 +42,12 @@ class Config:
             raise ValueError("Неизвестный состав ансамбля")
         if self.key not in TONICS or self.mode not in SCALES:
             raise ValueError("Неизвестная тональность/лад")
-        if not (45 <= self.tempo <= 190) or self.bars not in (8, 12, 16, 24, 32, 48, 64):
-            raise ValueError("Темп 45–190, тактов: 8/12/16/24/32/48/64")
+        if not (45 <= self.tempo <= 190) or not (
+            type(self.bars) is int and 8 <= self.bars <= 256 and self.bars % 4 == 0
+        ):
+            raise ValueError("Темп 45–190, тактов: кратно 4 от 8 до 256")
+        if type(self.ai_duration) is not int or self.ai_duration not in (0, 60, 120, 180, 300, 480, 600):
+            raise ValueError("Длительность AI: по партитуре, 1, 2, 3, 5, 8 или 10 минут")
         for name in ("density", "tension", "expression", "humanize", "brass_level", "climax"):
             if not (0 <= float(getattr(self, name)) <= 1):
                 raise ValueError(f"{name} должен быть от 0 до 1")
