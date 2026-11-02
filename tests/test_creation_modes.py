@@ -13,7 +13,7 @@ def test_creation_mode_choices_and_group_mapping():
     assert '<option value="instrumental">' in WEB
     assert '<option value="vocal">' in WEB
     assert '<option value="combined">' in WEB
-    assert "instrumental:{ensembles:['orchestra','quartet']" in WEB
+    assert "instrumental:{ensembles:['orchestra','quartet','chiptune','synthwave']" in WEB
     assert "vocal:{ensembles:['choir']" in WEB
     assert "combined:{ensembles:['orchestra_choir','quartet_choir']" in WEB
 
