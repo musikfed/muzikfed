@@ -18,8 +18,8 @@ case "$ACTION" in
     }
     systemctl --user daemon-reload
     systemctl --user enable --now "$SERVICE"
-    systemctl --user is-active "$SERVICE"
-    echo 'Web: http://192.168.0.100:9095'
+    bash "$PROJECT/scripts/wait-core.sh"
+    echo 'Web READY: http://192.168.0.100:9095'
     ;;
   stop)
     systemctl --user disable --now "$SERVICE"
@@ -32,15 +32,17 @@ case "$ACTION" in
     ;;
   restart)
     systemctl --user restart "$SERVICE"
-    systemctl --user is-active "$SERVICE"
-    echo 'Web: http://192.168.0.100:9095'
+    bash "$PROJECT/scripts/wait-core.sh"
+    echo 'Web READY: http://192.168.0.100:9095'
     ;;
   status)
     systemctl --user status "$SERVICE" --no-pager || true
     echo '---'
     systemctl --user is-enabled "$SERVICE" || true
     if systemctl --user is-active --quiet "$SERVICE"; then
-      curl --fail --silent --show-error --max-time 8 http://192.168.0.100:9095/api/health || true
+      if ! curl --fail --silent --show-error --max-time 5 http://192.168.0.100:9095/api/health; then
+        echo "WARNING: service active, but HTTP not responding; run bash $PROJECT/scripts/wait-core.sh" >&2
+      fi
       echo
     fi
     ;;
