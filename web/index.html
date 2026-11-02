@@ -98,7 +98,7 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <h3>Слова песни — редактируемый черновик</h3><pre class="lyrics-preview" id="lyricsText"></pre>
 <a class="download" id="lyricsLink">Скачать lyrics.txt</a>
 <p class="hint">Воспроизведение WAV пока НЕ произносит текст; для настоящего русского вокала нужна отдельная модель.</p></div>
-<p class="hint">MusicXML открой на Windows .103 в MuseScore Studio 4 с MuseSounds Core. Там же экспортируй качественный WAV. Быстрый WAV здесь — только черновой. SATB в этой версии поёт гласные, а не русский текст.</p></section>
+<p class="hint">MusicXML открой на Windows .103 в MuseScore Studio 4 с MuseSounds Core. Там же экспортируй качественный WAV. Быстрый WAV здесь — только черновой. Черновой WAV FluidSynth не произносит русский текст. Для настоящего вокала подключается отдельная ACE-Step; слова доступны в lyrics.txt.</p></section>
 <section class="card" id="neuralCard">
 <div class="sectionhead"><h2>Настоящий вокал · ACE-Step 1.5</h2><span class="pill" id="aceStatus">Проверка модели...</span></div>
 <p class="hint">Отдельный необязательный нейродвижок RTX 3060. Он генерирует песню по словам и стилю, НЕ обязан петь точно написанную MIDI-мелодию и не гарантирует отдельные голосовые дорожки.</p>
@@ -123,8 +123,8 @@ const vals=['tempo','climax','density','tension','expression','humanize','brass'
 // UI groups existing score-engine ensembles, without pretending that the v0.1 choir sings Russian words.
 const creationModes={
   instrumental:{ensembles:['orchestra','quartet'],first:'orchestra',help:'Только инструменты: 12-партийный оркестр или струнный квартет. MusicXML, MIDI, черновой WAV. Вокала нет.'},
-  vocal:{ensembles:['choir'],first:'choir',help:'Демонстрация режима «только голос»: сейчас только нотный квартет SATB с гласными Ahh/Ooh/Mmm. Это НЕ сольный певец и НЕ разборчивые слова на русском. Настоящий вокальный движок ещё предстоит подключить.'},
-  combined:{ensembles:['orchestra_choir','quartet_choir'],first:'orchestra_choir',help:'Инструменты + нотный хор SATB: общий MusicXML/MIDI и отдельные партии хора/инструментов. Русское пение и отдельные вокальные WAV-дорожки пока не реализованы.'}
+  vocal:{ensembles:['choir'],first:'choir',help:'Демонстрация режима «только голос»: сейчас только нотный квартет SATB с гласными Ahh/Ooh/Mmm. Черновой WAV ещё не поёт русский текст. Если отдельно подключена ACE-Step, можно попробовать нейросольный вокал.'},
+  combined:{ensembles:['orchestra_choir','quartet_choir'],first:'orchestra_choir',help:'Инструменты + нотный хор SATB: общий MusicXML/MIDI и отдельные партии хора/инструментов. Для нейропесни по-русски можно отдельно подключить ACE-Step; синхронизированных отдельных вокальных WAV-стемов пока нет.'}
 };
 function selectCreationMode(){
   const chosen=creationModes[$('creationMode').value],select=$('ensemble');
@@ -139,7 +139,7 @@ function renderTimeline(bars){const c=$('timeline');c.replaceChildren();for(let 
 const ensembleDescriptions={
 orchestra:'12 инструментальных партий. Без хора и вокала. WAV — черновой FluidSynth.',
 quartet:'4 струнные партии. Без хора и вокала.',
-choir:'4 нотные партии SATB, только Ahh/Ooh/Mmm. Русские слова пока не поются.',
+choir:'4 нотные партии SATB. Русские слова сохраняются отдельно и в MusicXML, но не произносятся в WAV FluidSynth.',
 orchestra_choir:'12 партий оркестра + 4 партии SATB. Экспорт раздельных MIDI/MusicXML для хора и оркестра.',
 quartet_choir:'4 струнные партии + 4 партии SATB. Экспорт раздельных MIDI/MusicXML.'
 };
@@ -150,7 +150,7 @@ $('lyricsField').classList.toggle('hide',!hasChoir);
 $('brassField').classList.toggle('hide',!hasBrass);
 $('modelField').classList.toggle('hide',!c.use_ollama);
 $('ensembleHelp').textContent=ensembleDescriptions[c.ensemble];
-$('llmHelp').textContent=c.use_ollama?'Ollama должна работать на CORE: 127.0.0.1:11434, модель '+c.model+'. Она предлагает только мотив и гармонию; при ошибке применяется обычный композитор.':'LLM выключена: Python создаёт музыку сам. Для первого теста она не нужна.';
+$('llmHelp').textContent=c.use_ollama?'Ollama должна работать на CORE: 127.0.0.1:11434, модель '+c.model+'. Она предлагает мотив, гармонию и для хора черновик русских слов; при ошибке работает обычный композитор.':'LLM выключена: Python создаёт ноты сам, для хора слова — простой редактируемый черновик. Включи Ollama для AI-текста.';
 for(const name of vals){$(name+'Value').textContent=name==='tempo'?c.tempo+' BPM':Math.round((name==='brass'?c.brass_level:c[name])*100)+'%'}$('duration').textContent=Math.round(c.bars*4*60/c.tempo)+' сек.';$('pieceTitle').textContent=c.title;$('pieceCaption').textContent=c.key+' '+c.mode+' · '+c.tempo+' BPM · '+c.bars+' тактов · '+{orchestra:'Оркестр',quartet:'Струнный квартет',quartet_choir:'Струнный квартет + SATB',choir:'Вокальный SATB',orchestra_choir:'Оркестр и SATB'}[c.ensemble];renderTimeline(c.bars)}
 for(const key of [...vals,'title','key','mode','bars','choirEntry','useOllama','model','style','lyrics']) $(key).addEventListener('input',preview);
 $('ensemble').addEventListener('change',preview);
