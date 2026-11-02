@@ -14,10 +14,12 @@ from pathlib import Path
 import subprocess
 import time
 import urllib.request
+import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = ROOT / ".cache"
 LEASE = RUNTIME / "gpu-audio-active.json"
+SCORE_LEASE = RUNTIME / "gpu-score-active.json"
 LOCK = RUNTIME / "gpu-control.lock"
 ACE_UNIT = "pocket-orchestra-ace.service"
 
@@ -40,6 +42,18 @@ def _active() -> dict | None:
         return None
     if time.time() - entry.get("created", 0) > 7200:
         LEASE.unlink(missing_ok=True)
+        return None
+    return entry
+
+
+def _active_score() -> dict | None:
+    """Recover orphaned Qwen reservation after a stalled/crashed API process."""
+    try:
+        entry = json.loads(SCORE_LEASE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if time.time() - entry.get("created", 0) > 900:
+        SCORE_LEASE.unlink(missing_ok=True)
         return None
     return entry
 
@@ -72,11 +86,44 @@ def unload_ollama(model: str) -> None:
         pass
 
 
+@contextmanager
+def score_session(model: str):
+    """Reserve the RTX for the whole Ollama operation, not only its preflight.
+
+    Serializes Qwen and ACE-Step across concurrent FastAPI requests/processes.
+    The existing before_score() remains a non-reserving legacy check.
+    """
+    token = uuid.uuid4().hex
+    with _locked():
+        if _active():
+            raise RuntimeError("RTX занята генерацией песни ACE-Step. Дождись WAV.")
+        if _active_score():
+            raise RuntimeError("RTX занята другой партитурой Qwen. Дождись её завершения.")
+        if _unit_installed():
+            _systemctl("stop")
+        SCORE_LEASE.write_text(json.dumps({
+            "token": token, "model": model, "created": time.time()
+        }), encoding="utf-8")
+    try:
+        yield
+    finally:
+        # Keep the reservation until the model has been asked to unload.
+        try:
+            unload_ollama(model)
+        finally:
+            with _locked():
+                current = _active_score()
+                if current and current.get("token") == token:
+                    SCORE_LEASE.unlink(missing_ok=True)
+
+
 def before_score() -> None:
     """Do not start Qwen while ACE song job owns GPU."""
     with _locked():
         if _active():
             raise RuntimeError("RTX занята генерацией песни. Дождись WAV или останови ACE-Step.")
+        if _active_score():
+            raise RuntimeError("RTX уже занята другой партитурой Qwen.")
         if _unit_installed():
             _systemctl("stop")
 
@@ -85,6 +132,8 @@ def claim_audio(job_id: str, model: str = "qwen3:8b") -> None:
     with _locked():
         if _active():
             raise RuntimeError("RTX уже занята нейропесней. Дождись завершения.")
+        if _active_score():
+            raise RuntimeError("RTX занята ИИ-полифонистом Qwen. Дождись завершения партитуры.")
         unload_ollama(model)
         LEASE.write_text(json.dumps({"job_id": job_id, "created": time.time()}), encoding="utf-8")
 
@@ -99,19 +148,21 @@ def release_audio(job_id: str) -> None:
     with _locked():
         active = _active()
         if active and active.get("job_id") == job_id:
-            LEASE.unlink(missing_ok=True)
+            # Stop the audio model BEFORE clearing the lease. Otherwise another
+            # Qwen request may start during systemd shutdown while VRAM is held.
             if _unit_installed():
-                try:
-                    _systemctl("stop")
-                except RuntimeError:
-                    pass
+                _systemctl("stop")
+            LEASE.unlink(missing_ok=True)
 
 
 def state() -> dict:
     with _locked():
         active = _active()
+        score = _active_score()
         return {
             "ace_installed": _unit_installed(), "audio_job_active": bool(active),
+            "score_job_active": bool(score),
+            "gpu_owner": "ace-step" if active else "qwen" if score else "idle",
             "job_id": active.get("job_id") if active else None,
             "policy": "Сначала освобождаем RTX от Ollama, затем запускаем ACE-Step. После WAV останавливаем ACE-Step.",
         }
