@@ -146,6 +146,8 @@ button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(
 <button type="button" class="secondary" id="aceHybrid" disabled style="width:100%;margin-top:10px">🎼 Гибрид: MIDI-аранжировка → нейросетевой MP3</button>
 <p class="hint">Первая кнопка — самостоятельный аудиогенератор, без обязательного предварительного MIDI. Вторая — сначала нотная партитура, затем ACE-Step cover. Результат cover может менять исходные ноты.</p>
 <p class="hint" id="aceMessage">Для нейропесен нужно один раз установить ACE-Step на CORE; далее она будет запускаться по нажатию кнопки.</p>
+<button type="button" id="aceCheckResult" class="secondary" style="width:100%;margin-bottom:10px">↻ Проверить готовность MP3 / восстановить скачивание</button>
+<p id="aceJobInfo" class="hint" aria-live="polite">Последняя нейрозадача: —</p>
 <div id="aceOutput" class="hide"><audio id="aceAudio" controls preload="none"></audio><a id="aceLink" class="download" style="display:block">Скачать готовую песню MP3</a></div>
 </section>
 <section class="card results" id="qualityCard"><div class="sectionhead"><h2>Контроль музыкальной структуры</h2><span id="passCount" class="pill"></span></div><div class="quality" id="checks"></div><div class="info"><span>Всего нот: <strong id="noteCount"></strong></span><span>Опорные созвучия: <strong id="chordRatio"></strong></span><span>Скачки > октавы: <strong id="leapRatio"></strong></span></div><div id="warnings" class="hint"></div><p class="note">Эти проверки находят технические ошибки, но не доказывают музыкальную выразительность. Художественное качество оценивают по прослушиванию финального WAV.</p></section>
@@ -368,6 +370,8 @@ async function createAiSong(mode){
     if(!r.ok)throw Error(typeof d.detail==='string'?d.detail:JSON.stringify(d.detail));
     const job=d.job_id;
     lastJob=job;
+    try{localStorage.setItem('pocket_orchestra_last_audio_job',job);}catch{}
+    $('aceJobInfo').textContent='Задача: '+job;
     $('aceMessage').textContent='Освобождаем RTX от Ollama, запускаем ACE-Step и загружаем модель при необходимости...';
     const sr=await fetch('/api/vocal/start',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({job_id:job,mode:mode==='guided'?'guided':'original'})});
@@ -402,6 +406,41 @@ async function createAiSong(mode){
     aceBusy=false;setAceButtons(false);
   }
 }
+function showFinishedMp3(url){
+  $('aceAudio').src=url;
+  $('aceLink').href=url;
+  $('aceLink').setAttribute('download','neural_song.mp3');
+  $('aceOutput').classList.remove('hide');
+}
+let recoveryBusy=false;
+async function checkSavedAudio({silent=false}={}){
+  if(recoveryBusy)return;
+  const job=(()=>{try{return localStorage.getItem('pocket_orchestra_last_audio_job')}catch{return null}})();
+  if(!job){
+    if(!silent)$('aceMessage').textContent='Нет сохранённого ID песни. Сначала запусти эскиз или композицию.';
+    return;
+  }
+  recoveryBusy=true;
+  $('aceJobInfo').textContent='Последняя нейрозадача: '+job;
+  try{
+    const r=await fetch('/api/vocal/poll/'+encodeURIComponent(job),{cache:'no-store'});
+    const v=await r.json();
+    if(!r.ok)throw Error(typeof v.detail==='string'?v.detail:'Ошибка HTTP '+r.status);
+    if(v.state==='complete'&&v.mp3_url){
+      showFinishedMp3(v.mp3_url);
+      $('aceMessage').textContent='MP3 готов! Слушай или скачивай кнопкой ниже.';
+    }else if(v.state==='failed'){
+      $('aceMessage').textContent='Ошибка генерации: '+(v.message||'смотри журнал ACE-Step');
+    }else if(!silent){
+      $('aceMessage').textContent='MP3 пока создаётся. Можно обновить страницу: ID задачи сохранён.';
+    }
+  }catch(error){
+    if(!silent)$('aceMessage').textContent='Не удалось проверить MP3: '+error.message;
+  }finally{recoveryBusy=false}
+}
+$('aceCheckResult').addEventListener('click',()=>checkSavedAudio());
+checkSavedAudio({silent:true});
+setInterval(()=>checkSavedAudio({silent:true}),10000);
 $('acePreview').addEventListener('click',()=>createAiSong('preview'));
 $('aceGenerate').addEventListener('click',()=>createAiSong('original'));
 $('aceHybrid').addEventListener('click',()=>createAiSong('guided'));
