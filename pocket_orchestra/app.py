@@ -16,7 +16,8 @@ from .quality import inspect
 from .harmony import optimize_satb
 from .ollama import generate_plan, generate_lyrics
 from .lyrics import draft_lyrics, annotate_score_lyrics
-from . import ace_step
+from . import ace_step, gpu_control
+from .ai_score import generate_counterpoint, apply_counterpoint
 from .control import router as control_router
 from .monitor import collect_metrics
 
@@ -90,6 +91,11 @@ def generate(payload: GenerateRequest):
         cfg = Config.from_dict(payload.config)
     except (TypeError, ValueError) as e:
         raise HTTPException(422, str(e)) from e
+    if cfg.use_ollama or cfg.score_engine == "ai_polyphony":
+        try:
+            gpu_control.before_score()
+        except (RuntimeError, OSError) as exc:
+            raise HTTPException(409, str(exc)) from exc
     plan = None
     llm_message = "Встроенный композитор: мотив + гармония + правила оркестровки"
     if cfg.use_ollama:
@@ -97,10 +103,19 @@ def generate(payload: GenerateRequest):
             plan = generate_plan(cfg)
             llm_message = f"LLM: {cfg.model}; план получен и проверен"
         except (RuntimeError, ValueError) as e:
+            gpu_control.unload_ollama(cfg.model)
             raise HTTPException(503, f"Выбран режим Ollama, но музыкальный AI-план не получен: {str(e)[:200]}") from e
     piece = compose(cfg, plan)
     voice_result = optimize_satb(piece)
     piece.planning["satb_optimization"] = voice_result
+    if cfg.score_engine == "ai_polyphony":
+        try:
+            proposal = generate_counterpoint(cfg)
+            apply_counterpoint(piece, proposal)
+            llm_message += f"; AI-полифония: ноты двух голосов написал {cfg.model}"
+        except (RuntimeError, ValueError) as exc:
+            gpu_control.unload_ollama(cfg.model)
+            raise HTTPException(503, f"ИИ-полифония не создана: {str(exc)[:180]}") from exc
     lyrics_text = None
     if "soprano" in piece.tracks:
         lyrics_text = cfg.lyrics.strip() or None
@@ -111,6 +126,7 @@ def generate(payload: GenerateRequest):
                 lyric_mode = f"ollama:{cfg.model}"
                 llm_message += "; оригинальные русские стихи написаны LLM"
             except (RuntimeError, ValueError) as exc:
+                gpu_control.unload_ollama(cfg.model)
                 raise HTTPException(
                     503, f"Оllama не сочинила стихов. Впиши свой текст или проверь Ollama: {str(exc)[:150]}"
                 ) from exc
@@ -118,6 +134,8 @@ def generate(payload: GenerateRequest):
             piece.planning["lyrics_on_soprano_notes"] = annotate_score_lyrics(piece, lyrics_text)
         piece.planning["lyric_mode"] = lyric_mode
         piece.planning["sung_audio_available"] = False
+    if cfg.use_ollama or cfg.score_engine == "ai_polyphony":
+        gpu_control.unload_ollama(cfg.model)
     report = inspect(piece)
     job_id = str(uuid.uuid4())
     out = OUTPUTS / job_id
@@ -161,15 +179,34 @@ def generate(payload: GenerateRequest):
 
 @app.get("/api/vocal/status")
 def vocal_engine_status():
-    return ace_step.status()
+    state = gpu_control.state()
+    engine = ace_step.status()
+    # Service may be installed but stopped to release VRAM.
+    return {**engine, **state, "available": state["ace_installed"] or engine["available"]}
+
+
+@app.get("/api/gpu/status")
+def gpu_engine_status():
+    return gpu_control.state()
 
 
 @app.post("/api/vocal/start")
 def vocal_engine_start(payload: RenderRequest):
     job = _jobdir(payload.job_id)
     try:
+        gpu_control.claim_audio(payload.job_id)
+        gpu_control.launch_audio()
+        # First run downloads its weights; wait for REST readiness, not for VRAM metrics.
+        import time
+        for _ in range(45):
+            if ace_step.status()["available"]:
+                break
+            time.sleep(2)
+        else:
+            raise RuntimeError("ACE-Step ещё загружает веса или не стартовала. Проверь journalctl --user -u pocket-orchestra-ace.service")
         result = ace_step.start(job, mode=payload.mode)
-    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError, RuntimeError) as exc:
+        gpu_control.release_audio(payload.job_id)
         raise HTTPException(503, str(exc)[:250]) from exc
     return result
 
@@ -181,6 +218,8 @@ def vocal_engine_poll(job_id: str):
         status = ace_step.poll(job)
     except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
         raise HTTPException(503, str(exc)[:250]) from exc
+    if status.get("url_ready") or status.get("state") == "failed":
+        gpu_control.release_audio(job_id)
     if status.get("url_ready"):
         status["wav_url"] = f"/api/artifacts/{job_id}/neural_song.wav"
     return status
