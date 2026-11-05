@@ -299,3 +299,10 @@ git push origin main
 ### Что пока нельзя обещать
 
 Пять составов в текущем интерфейсе — это **нотные ансамбли**, а не три будущих аудиорежима. В частности, хор в v0.1 поёт только гласные (Ahh/Ooh/Mmm), полноценное исполнение русского текста в WAV ещё не реализовано. Движок для пения на русском, отделённые стемы и длинные песни — запланированные задачи v0.2+. Подробности в `docs/ROADMAP.md`.
+
+
+## Project showcase · Презентация · 11 languages
+
+[**Visual workflow, international descriptions and contacts**](docs/showcase/README.md)
+
+![muzikfed workflow](docs/showcase/overview.svg)
