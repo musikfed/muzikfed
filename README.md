@@ -305,4 +305,3 @@ git push origin main
 
 [**Visual workflow, international descriptions and contacts**](docs/showcase/README.md)
 
-![muzikfed workflow](docs/showcase/overview.svg)
