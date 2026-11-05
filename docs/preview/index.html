@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pocket Orchestra — Композитор • Дирижёр</title>
+<style>
+:root{color-scheme:dark;--bg:#101319;--panel:#1a1e26;--panel2:#242a35;--line:#363d49;--ink:#f4f2ec;--soft:#aeb5c1;--amber:#e8b975;--green:#86cead;--red:#f49e98;--blue:#91bdfb}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 78% -10%,#53422f55,transparent 38%)}
+.shell{max-width:1440px;margin:0 auto;padding:24px}.top{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap;margin:0 0 25px}.brand{display:flex;gap:14px;align-items:center}
+.logo{width:50px;height:50px;border:1px solid #9b7651;background:linear-gradient(140deg,#60482e,#201d1c);border-radius:14px;display:grid;place-items:center;font-size:26px}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.18em;color:var(--amber);font-weight:800}
+h1{font-size:27px;margin:2px 0 0;letter-spacing:-.035em}h2{font-size:17px;margin:0 0 16px;font-weight:650}h3{font-size:14px;margin:0 0 8px}.hint,.muted{color:var(--soft);font-size:12px;line-height:1.6}.status{display:flex;gap:8px;align-items:center;color:var(--soft);font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:var(--amber)}.dot.up{background:var(--green)}
+.layout{display:grid;grid-template-columns:minmax(330px, 460px) minmax(500px,1fr);align-items:start;gap:18px}.left,.right{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:20px;box-shadow:0 12px 25px #0002}.sectionhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.pill{border:1px solid #6f563e;border-radius:99px;padding:5px 10px;font-size:11px;color:#ffd6a8}
+label{display:block;font-size:12px;font-weight:650;color:#e0e3e8;margin:0 0 7px}.field{margin-bottom:16px}.field:last-child{margin-bottom:0}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--panel2);border:1px solid #454c59;border-radius:9px;width:100%;padding:10px 11px;outline:none}input:focus,select:focus,textarea:focus{border-color:var(--amber)}textarea{min-height:111px;resize:vertical;line-height:1.6}input[type=range]{height:18px;padding:0;accent-color:var(--amber);cursor:pointer}input[type=checkbox]{width:17px;height:17px;accent-color:var(--amber)}
+.rangeLabel{display:flex;justify-content:space-between;gap:15px}.rangeLabel output{color:var(--amber);font-variant-numeric:tabular-nums}.checkbox{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--soft)}.checkbox label{margin:0;font-size:13px;font-weight:500;color:var(--soft)}
+button{border:0;cursor:pointer;font:inherit}.primary{background:linear-gradient(90deg,#dcb178,#eac898);color:#282018;padding:14px 18px;width:100%;border-radius:10px;font-weight:750;letter-spacing:.02em}.primary:disabled{opacity:.5;cursor:progress}.secondary{background:#303846;border:1px solid #485364;color:var(--ink);padding:10px 13px;border-radius:9px}.danger{background:#472725;border:1px solid #9b4f4d;color:#ffe7e4;padding:11px 15px;border-radius:9px;font-weight:700;width:100%}.danger:hover{background:#59302c}.danger:disabled{opacity:.5;cursor:wait}
+/* Lightweight live CORE hardware telemetry: bars updated every three seconds. */
+.monitor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.metric{background:#252b34;border:1px solid #3b424f;border-radius:10px;padding:12px;min-width:0}
+.metric-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.metric-value{font-size:17px;color:var(--amber);font-weight:750;font-variant-numeric:tabular-nums}
+.meter{height:8px;background:#141920;border-radius:8px;overflow:hidden;margin:10px 0 7px}
+.meter-fill{height:100%;background:linear-gradient(90deg,#659a91,#b4d2b4);width:0;transition:width .55s ease}
+.meter-fill.hot{background:linear-gradient(90deg,#d2a360,#eb836e)}
+.socket-lines{margin-top:8px;display:flex;flex-wrap:wrap;gap:5px}
+.socket-lines span{background:#303846;border-radius:6px;padding:4px 7px;font-size:11px}
+#monGpuName{word-break:break-word}
+@media(max-width:520px){.monitor-grid{grid-template-columns:1fr}}
+
+.info{display:flex;justify-content:space-between;gap:12px;background:#252b34;border:1px solid #3b424f;padding:12px;border-radius:9px;margin:14px 0;font-size:12px;color:var(--soft)}.info strong{color:var(--ink)}
+.stage{background:linear-gradient(160deg,#222936,#161b23);min-height:245px;border:1px solid #48505d;border-radius:13px;padding:19px}.stageTop{display:flex;justify-content:space-between;align-items:center;gap:15px}.stageSub{font-size:12px;color:var(--soft)}
+.timeline{display:flex;gap:4px;margin:21px 0 15px}.bar{height:33px;flex:1;background:#485262;border:1px solid #687383;border-radius:3px;opacity:.65;position:relative;transition:.2s;min-width:3px}.bar:nth-child(4n+1){border-left:2px solid #d7b783}.bar:hover{opacity:1;transform:translateY(-3px)}.bar.a{background:#657d78}.bar.b{background:#957552}.bar.c{background:#7a6f9d}.bar.d{background:#608495}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--soft)}.legend i{display:inline-block;width:9px;height:9px;margin-right:5px;border-radius:2px}.sectionTag{font-size:11px;padding:5px 7px;border-radius:6px;background:#343e4e;color:var(--soft)}
+.parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(157px,1fr));gap:7px}.part{background:#252b34;border:1px solid #353e4b;border-radius:8px;padding:9px;font-size:12px;display:flex;justify-content:space-between;gap:8px}.part b{font-variant-numeric:tabular-nums;color:var(--amber);font-size:11px}
+.outputs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}.download{border-radius:9px;border:1px solid #5d6b78;background:#2a3641;color:#f4f4ee;text-align:center;text-decoration:none;padding:13px 7px;font-size:12px;font-weight:650}.download:hover{border-color:var(--amber)}.download.disabled{opacity:.45;pointer-events:none}
+.results{display:none}.results.visible{display:block}.quality{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px}.check{display:flex;gap:9px;padding:10px;border:1px solid #45505b;border-radius:8px;font-size:12px}.ok{color:var(--green)}.bad{color:var(--red)}.lyrics-preview{white-space:pre-wrap;max-height:240px;overflow:auto;color:var(--ink);line-height:1.65;background:#252b34;border-radius:8px;padding:14px;font-size:12px}.note{border-left:3px solid var(--amber);background:#302d28;padding:12px 13px;border-radius:0 8px 8px 0;font-size:12px;line-height:1.6;color:#e7d7c5}.hide{display:none}.footer{padding:18px 2px;color:var(--soft);font-size:11px}.spinner{display:none;margin-right:7px;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}audio{width:100%;margin:12px 0}
+@media(max-width:980px){.layout{grid-template-columns:1fr}.shell{padding:15px}.top{gap:12px}}@media(max-width:520px){.grid3{grid-template-columns:1fr 1fr}.outputs{grid-template-columns:1fr 1fr}.card{padding:15px}}
+</style></head><body>
+<!-- Read-only markup extracted from publicly available application frontend. Scripts removed; no backend, camera, device or API access. -->
+<div class="shell">
+<header class="top"><div class="brand"><div class="logo">♬</div><div><span class="eyebrow">AI COMPOSITION WORKSTATION · CORE .100</span><h1>Pocket Orchestra</h1></div></div><div class="status"><span id="statusDot" class="dot"></span><span id="serverStatus">Проверка движка...</span></div></header>
+<div class="layout"><div class="left">
+<section class="card"><div class="sectionhead"><h2>01 · Задание композитору</h2><span class="pill">Промпт → партитура</span></div>
+<div class="field"><label for="creationMode">01a · Режим создания</label><select id="creationMode"><option value="instrumental">🎻 Только инструменты</option><option value="vocal">🎤 Только голос: MIDI-хор или AI-певец</option><option value="combined">🎼 Инструменты + вокал: MIDI или AI</option></select><div class="note" id="creationModeInfo" style="margin-top:10px">Инструментальный режим: партитура, MIDI и черновой WAV. Без вокала.</div></div>
+<div class="field"><label for="title">Название произведения</label><input id="title" value="Свет за горизонтом" maxlength="100"></div>
+<div class="field"><label for="prompt">Описание настроения, развития и звучания</label><textarea id="prompt" maxlength="4000">Тревожное начало на виолончелях; постепенно вступают деревянные духовые, развивается надежда. Затем величественная кульминация с валторнами и трубами, в конце светлая тихая кода.</textarea><div class="hint">Режим Ollama позволяет LLM предложить гармонию и мотив. Без Ollama работает автономный композитор с заданной музыкальной формой.</div></div>
+<div class="field"><label for="promptPreset">Как писать промпт — примеры музыкального задания</label>
+<div class="grid2"><select id="promptPreset">
+<option value="orchestra">Сказочный оркестр · тема и кульминация</option>
+<option value="dendy">Dendy 8-bit · приключение и битва</option>
+<option value="synthwave">Synthwave · ночной город</option>
+<option value="lyrical">Лирическая песня · чистый голос</option>
+</select><button type="button" class="secondary" id="usePromptPreset">Вставить пример</button></div>
+<div class="hint">Структура: жанр → ведущие инструменты → характер темы → развитие A/B → кульминация → финал. Пример заменяет только название, описание, состав, стиль и темп; слова песни сохраняются.</div></div>
+<div class="grid2"><div class="field"><label for="ensemble">Состав</label><select id="ensemble"><option value="orchestra" selected>Симфонический оркестр</option><option value="quartet">Струнный квартет</option>
+<option value="chiptune">8-bit / Dendy — 4 MIDI-партии</option>
+<option value="synthwave">Synthwave — 4 MIDI-партии</option><option value="choir">Нотный хор SATB (Ahh/Ooh/Mmm)</option><option value="orchestra_choir">Оркестр + SATB хор</option><option value="quartet_choir">Струнный квартет + SATB</option></select></div>
+<div class="field" id="choirVowelField"><label for="vowel">Гласная хора</label><select id="vowel"><option>Ahh</option><option>Ooh</option><option>Mmm</option></select></div></div><div class="hint" id="ensembleHelp" style="margin:-6px 0 14px"></div><div class="field"><label for="scoreEngine">Движок сочинения нот</label>
+<select id="scoreEngine"><option value="rules">CPU: нотный алгоритм (без ИИ)</option>
+<option value="ai_polyphony">ИИ-полифонист Qwen / Ollama — реальные ноты двух голосов</option></select>
+<div class="hint">Второй движок вызывает Qwen для нот и контрапункта, затем освобождает VRAM. Это экспериментальная двухголосная полифония, не доказанное качество Баха.</div>
+<div class="hint" id="qwenStatus">Проверяем локальную Ollama и модель qwen3:8b…</div></div>
+<div class="field"><label for="style">Стиль музыки</label><select id="style">
+<option value="auto">Авто — по описанию</option>
+<option value="cinematic">Симфонический / кино</option>
+<option value="march">Торжественный марш</option>
+<option value="lyrical">Лирика / романс</option>
+<option value="folk">Народная мелодика</option>
+<option value="opera">Оперная фразировка (ноты, пока без певца)</option>
+<option value="ambient">Атмосферный / спокойный</option>
+<option value="chiptune">8-bit / Dendy — игровая мелодия</option>
+<option value="synthwave">Synthwave / электронная музыка</option>
+</select><div class="hint">Стиль влияет на мелодию и оркестровку. Для настоящих 8-bit MIDI-партий выбери состав «8-bit / Dendy». Вокал создаётся отдельной кнопкой.</div></div>
+<div class="field" id="vocalTimbreField"><label for="vocalTimbre">Желаемый певческий голос для ACE-Step</label>
+<select id="vocalTimbre">
+<option value="auto">Авто — по промпту и стилю</option>
+<option value="soprano">Высокое женское сопрано</option>
+<option value="mezzo">Тёплое меццо-сопрано</option>
+<option value="tenor">Мужской лирический тенор</option>
+<option value="baritone">Мужской баритон</option>
+<option value="bass">Глубокий мужской бас</option>
+<option value="duet">Дуэт — мужской и женский голоса</option>
+</select><div class="hint">Подсказка для нейросети, а не гарантированный выбор тембра; MIDI-хор по-прежнему не произносит слова.</div></div>
+<div class="field" id="lyricsField"><label for="lyrics">Текст песни (русский) — свой, от Ollama или от ACE-Step</label>
+<textarea id="lyrics" maxlength="4000" placeholder="Впиши слова, либо оставь пустым: ACE-Step сочинит их по описанию; для MIDI-текста включи Ollama"></textarea>
+<div class="hint">Если вписаны стихи, они сохраняются в lyrics.txt и MusicXML. Если текст пуст, нейросеть ACE-Step сочинит слова из описания при запуске аудио; нотный WAV слов не произносит.</div></div>
+<div class="field" id="choirEntryField"><label for="choirEntry">Вступление хора</label><select id="choirEntry"><option value="-1">Авто — по промпту</option><option value="0">С самого начала</option><option value="0.25">После 25% пьесы</option><option value="0.5">После 50% пьесы</option><option value="0.75">После 75% пьесы</option></select></div></section>
+<section class="card"><h2>02 · Музыкальная форма</h2>
+<div class="grid3"><div class="field"><label for="key">Тональность</label><select id="key"><option>C</option><option>C#</option><option selected>D</option><option>Eb</option><option>E</option><option>F</option><option>F#</option><option>G</option><option>Ab</option><option>A</option><option>Bb</option><option>B</option></select></div>
+<div class="field"><label for="mode">Лад</label><select id="mode"><option value="minor">Минор</option><option value="major">Мажор</option></select></div>
+<div class="field"><label for="bars">Такты 4/4</label><select id="bars"><option>8</option><option>12</option><option selected>16</option><option>24</option><option>32</option><option>48</option><option>64</option></select></div></div>
+<div class="field"><label class="rangeLabel" for="tempo"><span>Темп</span><output id="tempoValue">94 BPM</output></label><input type="range" id="tempo" min="45" max="190" value="94"></div>
+<div class="field"><label class="rangeLabel" for="climax"><span>Положение кульминации</span><output id="climaxValue">73%</output></label><input type="range" id="climax" min="10" max="95" value="73"></div>
+<div class="info"><span>Форма: <strong>A → A′ → B → A″</strong></span><span>Приблизительно: <strong id="duration">41 сек.</strong></span></div></section>
+<section class="card"><h2>03 · Оркестровщик и дирижёр</h2>
+<div class="field"><label class="rangeLabel" for="density"><span>Плотность фактуры</span><output id="densityValue">55%</output></label><input type="range" id="density" min="0" max="100" value="55"><div class="hint">Частота фигураций у кларнета, арфы и аккомпанирующих партий.</div></div>
+<div class="field"><label class="rangeLabel" for="tension"><span>Драматическое напряжение</span><output id="tensionValue">70%</output></label><input type="range" id="tension" min="0" max="100" value="70"></div>
+<div class="field"><label class="rangeLabel" for="expression"><span>Экспрессия и динамика</span><output id="expressionValue">80%</output></label><input type="range" id="expression" min="0" max="100" value="80"></div>
+<div class="field" id="brassField"><label class="rangeLabel" for="brass"><span>Мощность медных духовых</span><output id="brassValue">65%</output></label><input type="range" id="brass" min="0" max="100" value="65"><div class="hint">Влияет на силу и момент вступления валторн и труб.</div></div>
+<div class="field"><label class="rangeLabel" for="humanize"><span>Микронеровности MIDI</span><output id="humanizeValue">25%</output></label><input type="range" id="humanize" min="0" max="100" value="25"><div class="hint">Ноты в MusicXML остаются точными. Только MIDI получает небольшие смещения начала нот.</div></div>
+<div class="grid2"><div class="field"><label for="seed">Seed — повторяемый результат</label><input id="seed" type="number" min="0" max="4294967295" value="42"></div><div class="field" id="modelField"><label for="model">Локальная модель Ollama</label><input id="model" value="qwen3:8b"></div></div>
+<div class="checkbox"><input type="checkbox" id="useOllama"><label for="useOllama">Подключить Ollama для вариантов гармонии и мелодии (необязательно)</label></div><p class="hint" id="llmHelp">LLM выключена: Python создаёт ноты сам. Для первого теста она не нужна.</p>
+<div class="checkbox"><input type="checkbox" id="render" checked><label for="render">Создать MP3-предпрослушивание MIDI через FluidSynth + FFmpeg</label></div>
+<button id="go" class="primary">✦ Создать партитуру MIDI / MusicXML</button><button id="reroll" class="secondary" style="width:100%;margin-top:10px">↻ Новая вариация (другой seed)</button><button id="resetSettings" class="secondary" style="width:100%;margin-top:10px">Сбросить сохранённые настройки</button>
+<p class="hint" id="saveStatus">Настройки автоматически сохраняются в этом браузере при изменении.</p><p class="hint" id="working"></p></section>
+</div><div class="right">
+<section class="card" id="monitorCard"><div class="sectionhead"><h2>Мониторинг Huananzhi CORE .100</h2><span class="pill" id="monStatus">Подключение…</span></div>
+<div class="monitor-grid">
+<div class="metric"><div class="metric-head"><strong>Xeon · CPU</strong><span class="metric-value" id="monCpu">—</span></div>
+<div class="meter"><div class="meter-fill" id="monCpuBar"></div></div><div class="hint" id="monCpuInfo">Загрузка обоих процессоров</div><div class="socket-lines" id="monSockets"></div></div>
+<div class="metric"><div class="metric-head"><strong>RAM</strong><span class="metric-value" id="monRam">—</span></div>
+<div class="meter"><div class="meter-fill" id="monRamBar"></div></div><div class="hint" id="monRamInfo">Оперативная память</div></div>
+<div class="metric"><div class="metric-head"><strong>RTX 3060 · GPU</strong><span class="metric-value" id="monGpu">—</span></div>
+<div class="meter"><div class="meter-fill" id="monGpuBar"></div></div><div class="hint" id="monGpuInfo">Данные через nvidia-smi</div></div>
+<div class="metric"><div class="metric-head"><strong>Видеопамять · VRAM</strong><span class="metric-value" id="monVram">—</span></div>
+<div class="meter"><div class="meter-fill" id="monVramBar"></div></div><div class="hint" id="monVramInfo">Из занятых 12 ГБ</div></div>
+</div>
+<div class="info" style="flex-wrap:wrap"><span>API-процесс: <strong id="monProcess">—</strong></span><span>Диск 2 ТБ: <strong id="monDisk">—</strong></span></div>
+<p class="hint">Обновляется каждые 3 секунды — наблюдай во время генерации. CPU, RAM и GPU показывают загрузку всей машины, включая другие программы. При обычной генерации нот видеокарта может оставаться на 0%: GPU нужен прежде всего для LLM.</p>
+</section>
+<section class="card"><div class="sectionhead"><h2>Партитура и структура</h2><span class="sectionTag" id="currentState">Ожидает генерации</span></div>
+<div class="stage"><div class="stageTop"><div><div class="eyebrow">ОБЗОР ПЬЕСЫ</div><h2 id="pieceTitle" style="font-size:23px;margin:9px 0 3px">Свет за горизонтом</h2><div class="stageSub" id="pieceCaption">D minor · 94 BPM · 16 тактов · Оркестр</div></div><div style="font-size:38px;color:#d6b585">♩</div></div><div class="timeline" id="timeline"></div><div class="legend"><span><i style="background:#657d78"></i>A: экспозиция</span><span><i style="background:#957552"></i>A′: развитие</span><span><i style="background:#7a6f9d"></i>B: контраст</span><span><i style="background:#608495"></i>A″: возвращение</span></div></div>
+<div style="margin-top:17px"><h3>Инструментальные партии <span id="partCount" class="muted"></span></h3><div id="parts" class="parts"><span class="muted">Партии появятся после генерации.</span></div></div></section>
+<section class="card results" id="resultCard"><h2>Файлы произведения</h2><div id="llmInfo" class="note"></div><div id="renderInfo" class="muted" style="margin-top:12px"></div><div id="audio"></div>
+<div class="outputs"><a id="xmlLink" class="download disabled">♬ MusicXML</a><a id="midiLink" class="download disabled">♫ MIDI</a><a id="reportLink" class="download disabled">≡ Отчёт JSON</a></div><div class="outputs" id="layerLinks" style="margin-top:10px"></div>
+<div id="lyricsResult" class="hide" style="margin-top:15px">
+<h3>Текст песни — сохранённые авторские слова</h3><pre class="lyrics-preview" id="lyricsText"></pre>
+<a class="download" id="lyricsLink">Скачать lyrics.txt</a>
+<p class="hint">Воспроизведение WAV пока НЕ произносит текст; для настоящего русского вокала нужна отдельная модель.</p></div>
+<p class="hint">MusicXML открой на Windows .103 в MuseScore Studio 4 с MuseSounds Core. Там же экспортируй качественный WAV. Быстрый WAV здесь — только черновой. Черновой WAV FluidSynth не произносит русский текст. Для настоящего вокала подключается отдельная ACE-Step; слова доступны в lyrics.txt.</p></section>
+<section class="card" id="neuralCard">
+<div class="sectionhead"><h2>ИИ-песни и гибрид · RTX 3060</h2><span class="pill" id="aceStatus">Проверка модели...</span></div>
+<p class="hint">Обе кнопки используют текущий промпт, стиль, темп и слова. Не случайные шаблоны: ACE-Step получает полный запрос. Модель включается только по требованию и после окончания освобождает RTX.</p>
+<div class="field"><label for="aiDuration">Длительность нейросетевой песни · отдельно от MIDI</label>
+<select id="aiDuration">
+<option value="0">Как в партитуре (16 тактов ≈ 41 сек.)</option>
+<option value="60">1 минута</option>
+<option value="120">2 минуты</option>
+<option value="180">3 минуты</option>
+<option value="300" selected>5 минут</option>
+<option value="480">8 минут (максимум с LM на RTX 3060)</option>
+<option value="600">10 минут (без музыкальной LM, свой текст песни)</option>
+</select>
+<div class="hint">Длительность AI-аудио не зависит от тактов MIDI. Для гибрида число тактов увеличится автоматически. На 12 ГБ 8 мин — предел с LM; 10 мин — без неё. Объём MP3 примерно 2 МБ/мин.</div></div>
+<button type="button" class="secondary" id="acePreview" disabled style="width:100%;margin-bottom:10px">▶ Проверочный AI-эскиз · 20 секунд MP3</button>
+<p class="hint">Проверка тембра, жанра и русского произношения. Это отдельная генерация, не первые 20 секунд будущего трека. Для эскиза RTX используется отдельно от Qwen.</p>
+<button type="button" class="primary" id="aceGenerate" disabled style="width:100%">🎤 Создать полноценную песню по промпту</button>
+<button type="button" class="secondary" id="aceHybrid" disabled style="width:100%;margin-top:10px">🎼 Гибрид: MIDI-аранжировка → нейросетевой MP3</button>
+<p class="hint">Первая кнопка — самостоятельный аудиогенератор, без обязательного предварительного MIDI. Вторая — сначала нотная партитура, затем ACE-Step cover. Результат cover может менять исходные ноты.</p>
+<p class="hint" id="aceMessage">Для нейропесен нужно один раз установить ACE-Step на CORE; далее она будет запускаться по нажатию кнопки.</p>
+<button type="button" id="aceCheckResult" class="secondary" style="width:100%;margin-bottom:10px">↻ Проверить готовность MP3 / восстановить скачивание</button>
+<p id="aceJobInfo" class="hint" aria-live="polite">Последняя нейрозадача: —</p>
+<div id="aceOutput" class="hide"><audio id="aceAudio" controls preload="none"></audio><a id="aceLink" class="download" style="display:block">Скачать готовую песню MP3</a></div>
+</section>
+<section class="card results" id="qualityCard"><div class="sectionhead"><h2>Контроль музыкальной структуры</h2><span id="passCount" class="pill"></span></div><div class="quality" id="checks"></div><div class="info"><span>Всего нот: <strong id="noteCount"></strong></span><span>Опорные созвучия: <strong id="chordRatio"></strong></span><span>Скачки > октавы: <strong id="leapRatio"></strong></span></div><div id="warnings" class="hint"></div><p class="note">Эти проверки находят технические ошибки, но не доказывают музыкальную выразительность. Художественное качество оценивают по прослушиванию финального WAV.</p></section>
+<section class="card" id="serviceCard">
+<div class="sectionhead"><h2>Питание Pocket Orchestra</h2><span class="pill">CORE .100</span></div>
+<p class="hint">Выключается только Pocket Orchestra и его автозапуск. Ubuntu, VPN, SSH, другие программы и сохранённая музыка остаются работать.</p>
+<button id="stopCore" type="button" class="danger">■ Выключить Pocket Orchestra</button>
+<p id="stopResult" class="hint" role="status" aria-live="polite"></p>
+<p class="hint">Включить после остановки: <code>ssh user@192.168.0.100</code>, затем <code>bash /1tbdisk/muzikfed/scripts/start-core.sh</code>. Если сервис выключен, сам веб-пульт уже недоступен.</p>
+</section>
+<section class="card"><h2>Ограничения и дальнейшая работа</h2><div class="muted">Параллельные квинты/октавы и голосоведение SATB · мотивная трансформация · crescendo/legato по фразам · несколько вариантов одной темы · перезапись выбранных тактов · автоматизация MuseScore на GRAPHICS .103 · критик по аудио.</div></section>
+</div></div><div class="footer">Pocket Orchestra · локальный движок MIDI и отдельная нейрогенерация через ACE-Step · веб-пульт: 192.168.0.100:9095 через LAN/VPN · без публичного проброса и авторизации.</div></div>
+</body></html>
