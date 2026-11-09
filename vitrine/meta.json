@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "id": "muzikfed",
+  "title": "muzikfed",
+  "version": "0.1.0",
+  "description": "Промпт → тематический музыкальный план → оркестровые партии → MusicXML + MIDI → прослушивание.",
+  "subtitle": null,
+  "tags": [
+    "Python"
+  ],
+  "visibility": "public",
+  "publication": "publish_on_merge",
+  "public_private_approved": false,
+  "display_mode": "interface",
+  "status": "Черновик — ожидает проверки",
+  "repo_url": "https://github.com/musikfed/muzikfed",
+  "screenshots": [
+    "vitrine/screenshots/desktop.png"
+  ],
+  "cover": "vitrine/generated/cover.svg",
+  "cover_type": "schematic-not-screenshot",
+  "screenshot_source": "browser-rendered-static",
+  "screenshot_origin": "web/index.html"
+}
