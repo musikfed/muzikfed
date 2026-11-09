@@ -11,11 +11,14 @@
   "visibility": "public",
   "publication": "publish_on_merge",
   "public_private_approved": false,
-  "display_mode": "diagram",
+  "display_mode": "interface",
   "status": "Черновик — ожидает проверки",
   "repo_url": "https://github.com/musikfed/muzikfed",
-  "screenshots": [],
+  "screenshots": [
+    "vitrine/screenshots/desktop.png"
+  ],
   "cover": "vitrine/generated/cover.svg",
   "cover_type": "schematic-not-screenshot",
-  "screenshot_source": "not-available"
+  "screenshot_source": "browser-rendered-static",
+  "screenshot_origin": "web/index.html"
 }
