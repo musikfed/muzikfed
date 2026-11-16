@@ -36,6 +36,8 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.ACTIONS_CLEANUP_TOKEN || github.token }}
+          GH_PROMPT_DISABLED: '1'
+          GH_PAGER: cat
           HAS_ALL_REPOS_TOKEN: ${{ secrets.ACTIONS_CLEANUP_TOKEN != '' }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           DRY_RUN_INPUT: ${{ inputs.dry_run }}
