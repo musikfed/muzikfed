@@ -1,0 +1,49 @@
+name: PEGINELAB Actions housekeeping
+
+on:
+  schedule:
+    - cron: '23 */4 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview only (nothing deleted)'
+        type: boolean
+        required: false
+        default: true
+  push:
+    branches: [main]
+    paths:
+      - 'Manage-GitHub-Actions.ps1'
+      - '.github/workflows/actions-housekeeping.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: peginelab-actions-housekeeping
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout housekeeping script
+        uses: actions/checkout@v4
+
+      - name: Prune old workflow runs and caches
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.ACTIONS_CLEANUP_TOKEN || github.token }}
+          HAS_ALL_REPOS_TOKEN: ${{ secrets.ACTIONS_CLEANUP_TOKEN != '' }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DRY_RUN_INPUT: ${{ inputs.dry_run }}
+        run: |
+          $scope = if ($env:HAS_ALL_REPOS_TOKEN -eq 'true') { 'All' } else { 'Self' }
+          $dryRun = $env:DRY_RUN_INPUT -eq 'true'
+          Write-Host "Cleanup scope: $scope"
+          if ($scope -eq 'Self') {
+            Write-Host 'For all repos, configure ACTIONS_CLEANUP_TOKEN with Actions:write access.'
+          }
+          ./Manage-GitHub-Actions.ps1 -Scope $scope -OlderThanHours 48 -CleanUnusedCaches -UnusedCacheDays 14 -MaxDeletes 800 -DryRun:$dryRun
